@@ -1,0 +1,39 @@
+# --- Secrets & personal data: never commit ---
+.env
+.env.*
+*.key
+secrets/
+Secrets.xcconfig
+Local.xcconfig
+# Real meal photos, exported health data, debug request dumps
+dev-data/
+fixtures/private/
+*.request.json
+*.healthexport
+export.zip
+
+# --- Swift / SPM ---
+.build/
+.swiftpm/
+Package.resolved
+*.o
+*.d
+
+# --- Xcode ---
+xcuserdata/
+DerivedData/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+App/Healther.xcodeproj/
+build/
+
+# --- Python (data build scripts) ---
+.venv/
+__pycache__/
+scripts/.cache/
+
+# --- OS / editors ---
+.DS_Store
+.vscode/
+.idea/
+*.swp
