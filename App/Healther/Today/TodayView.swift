@@ -3,6 +3,7 @@ import SwiftUI
 
 struct TodayView: View {
     @Environment(AppModel.self) private var model
+    @State private var pickingDate = false
 
     var snap: TodaySnapshot { model.today }
 
@@ -32,8 +33,16 @@ struct TodayView: View {
                 }
                 .refreshable { await model.refreshToday() }
             }
-            .navigationTitle("今日")
+            .navigationTitle(snap.isToday ? "今日" : "回顾")
             .toolbarTitleDisplayMode(.inlineLarge)
+            .toolbar {
+                if !snap.isToday {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("回到今天") { model.showDay(Date()) }
+                    }
+                }
+            }
+            .sheet(isPresented: $pickingDate) { datePicker }
         }
     }
 
@@ -42,19 +51,66 @@ struct TodayView: View {
     var greeting: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text(snap.date, format: .dateTime.month().day().weekday(.wide))
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
-                    .foregroundStyle(Theme.secondaryText)
-                Text(readiness.title)
+                dayStepper
+                Text(headline.title)
                     .font(.system(size: 22, weight: .bold, design: .rounded))
-                Text(readiness.detail)
+                    .contentTransition(.opacity)
+                Text(headline.detail)
                     .font(.system(size: 13))
                     .foregroundStyle(Theme.secondaryText)
+                if snap.note != nil {
+                    Label("\(model.assistantName) 钉的", systemImage: "pin.fill")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Theme.pink)
+                        .padding(.top, 2)
+                }
             }
             Spacer()
             AgentOrb(state: .idle, size: 56)
         }
         .padding(.top, 4)
+    }
+
+    /// ‹ 10月19日 星期一 › — tap the date for a calendar.
+    var dayStepper: some View {
+        let cal = Calendar.current
+        return HStack(spacing: 6) {
+            Button {
+                model.showDay(cal.date(byAdding: .day, value: -1, to: model.todayDay) ?? model.todayDay)
+            } label: { Image(systemName: "chevron.left") }
+            Button { pickingDate = true } label: {
+                Text(snap.date, format: .dateTime.month().day().weekday(.wide))
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+            }
+            Button {
+                model.showDay(cal.date(byAdding: .day, value: 1, to: model.todayDay) ?? model.todayDay)
+            } label: { Image(systemName: "chevron.right") }
+            .disabled(snap.isToday)
+            .opacity(snap.isToday ? 0.3 : 1)
+        }
+        .font(.system(size: 13, weight: .semibold))
+        .foregroundStyle(Theme.secondaryText)
+        .buttonStyle(.plain)
+    }
+
+    var datePicker: some View {
+        NavigationStack {
+            DatePicker("日期", selection: Binding(get: { model.todayDay }, set: { model.showDay($0); pickingDate = false }),
+                       in: ...Date(), displayedComponents: .date)
+                .datePickerStyle(.graphical)
+                .padding()
+                .navigationTitle("看看哪一天")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("完成") { pickingDate = false } } }
+        }
+        .presentationDetents([.medium])
+    }
+
+    /// The agent's pinned card wins; otherwise a rule-based read of the day.
+    var headline: (title: String, detail: String) {
+        if let n = snap.note { return (n.title, n.detail) }
+        if !snap.isToday { return ("回顾这一天", "左右切换日期，或者问问\(model.assistantName)那天过得怎么样") }
+        return readiness
     }
 
     var energyHero: some View {
@@ -67,7 +123,7 @@ struct TodayView: View {
                     Text("\(Int(max(goal - eaten, 0).rounded()))")
                         .font(.metric(30, weight: .bold))
                         .contentTransition(.numericText())
-                    Text(eaten > goal ? "已超出" : "还可以吃").font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
+                    Text(eaten > goal ? "已超出" : snap.isToday ? "还可以吃" : "低于目标").font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
                 }
             }
             .frame(width: 136, height: 136)
@@ -117,7 +173,7 @@ struct TodayView: View {
         if let s = snap.health?.sleep {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Label("昨晚睡眠", systemImage: "moon.zzz.fill").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.lilac)
+                    Label(snap.isToday ? "昨晚睡眠" : "前一晚睡眠", systemImage: "moon.zzz.fill").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.lilac)
                     Spacer()
                     Text("\(s.start.formatted(date: .omitted, time: .shortened)) → \(s.end.formatted(date: .omitted, time: .shortened))")
                         .font(.metric(12, weight: .regular)).foregroundStyle(Theme.secondaryText)
@@ -136,7 +192,7 @@ struct TodayView: View {
             HStack(spacing: 12) {
                 Image(systemName: "moon.zzz.fill").font(.system(size: 20)).foregroundStyle(Theme.lilac)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("昨晚没有睡眠记录").font(.system(size: 14, weight: .semibold))
+                    Text(snap.isToday ? "昨晚没有睡眠记录" : "那晚没有睡眠记录").font(.system(size: 14, weight: .semibold))
                     Text("戴着 Apple Watch 入睡，并在「健康 → 睡眠」里打开睡眠追踪")
                         .font(.system(size: 12)).foregroundStyle(Theme.secondaryText)
                 }
@@ -161,9 +217,9 @@ struct TodayView: View {
 
     var mealsCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("今天吃了").sectionLabel()
+            Text(snap.isToday ? "今天吃了" : "这天吃了").sectionLabel()
             if snap.meals.isEmpty {
-                Text("还没有记录。去对话里拍一张吧 📷").font(.system(size: 14)).foregroundStyle(Theme.secondaryText)
+                Text(snap.isToday ? "还没有记录。去对话里拍一张吧 📷" : "这天没有饮食记录").font(.system(size: 14)).foregroundStyle(Theme.secondaryText)
             }
             ForEach(snap.meals) { meal in
                 HStack(spacing: 12) {

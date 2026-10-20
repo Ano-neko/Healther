@@ -310,9 +310,25 @@ final class AppModel {
 
     // MARK: Today
 
+    /// The day shown on the Today tab (start of day). Defaults to today.
+    var todayDay = Calendar.current.startOfDay(for: Date())
+    /// True while the user is looking at the current day, so it rolls over at midnight.
+    private var followsToday = true
+
     func refreshToday() async {
         guard let s = services else { return }
-        today = await TodaySnapshot.load(from: s)
+        if followsToday { todayDay = Calendar.current.startOfDay(for: Date()) }
+        let day = todayDay
+        let snap = await TodaySnapshot.load(from: s, day: day)
+        if day == todayDay { today = snap }
+    }
+
+    func showDay(_ day: Date) {
+        let start = Calendar.current.startOfDay(for: min(day, Date()))
+        guard start != todayDay else { return }
+        todayDay = start
+        followsToday = Calendar.current.isDateInToday(start)
+        Task { await refreshToday() }
     }
 
     // MARK: Data management

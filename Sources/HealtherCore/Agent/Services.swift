@@ -41,6 +41,8 @@ public final class HealtherServices: Sendable {
     public let barcode: OpenFoodFactsSource
     public let kv: KeyValueStore
 
+    public var dayNotes: DayNoteStore { DayNoteStore(kv: kv) }
+
     public var attachmentsDirectory: URL { config.dataDirectory.appendingPathComponent("attachments", isDirectory: true) }
 
     public init(config: HealtherConfig, db: SQLiteDatabase, llm: any LLMClient, health: any HealthDataSource,

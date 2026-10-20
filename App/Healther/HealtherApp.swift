@@ -46,6 +46,12 @@ struct RootView: View {
                ["chat", "today", "memory", "settings"].contains(target) {
                 tab = target
             }
+            // healther://day/2026-10-18 opens the Today tab on that day
+            if url.host() == "day", let key = url.pathComponents.last,
+               let day = try? Date(key, strategy: .iso8601.year().month().day()) {
+                model.showDay(day)
+                tab = "today"
+            }
         }
         .onChange(of: model.hasAPIKey, initial: true) { _, has in showOnboarding = !has }
         .fullScreenCover(isPresented: $showOnboarding) {

@@ -41,6 +41,9 @@ struct ContextAssembler {
         let today = clock.startOfDay(now), tomorrow = clock.endOfDay(now)
         lines.append("- 现在：\(clock.stamp(now)) \(clock.weekdayName(now))（\(clock.utcOffsetString(now))）")
         if s.health.isMock { lines.append("- 注意：当前是开发环境的模拟健康数据") }
+        if !knowsName {
+            lines.append("- 你们还不认识：档案里还没有 TA 的称呼。先简单介绍自己，问 TA 希望你怎么称呼 TA，拿到就 update_profile（basics / 称呼）。之后在聊天中自然地了解身高体重、目标、作息等，一次最多问一件，不要问卷式盘问。")
+        }
 
         let goals = (try? s.wellbeing.goals()) ?? []
         func goal(_ k: WellbeingStore.GoalKind) -> String {
@@ -85,6 +88,9 @@ struct ContextAssembler {
         if let moods = try? s.wellbeing.moods(from: today, to: tomorrow), !moods.isEmpty {
             lines.append("- 今日情绪记录：" + moods.map { "\(clock.timeString($0.at)) \($0.valence > 0 ? "+" : "")\($0.valence) \($0.labels.joined(separator: "/"))" }.joined(separator: "；"))
         }
+        if let note = s.dayNotes.note(for: clock.dayKey(now)) {
+            lines.append("- 今日卡片（你钉在「今日」页顶部的）：「\(note.title)」\(note.detail)")
+        }
         let otherGoals = goals.filter { [.bedtime].contains($0.kind) }
         if !otherGoals.isEmpty {
             lines.append("- 其他目标：" + otherGoals.map { "\($0.kind.title) \(fmt($0.target, 1))\($0.kind.unit)" + ($0.note.map { "（\($0)）" } ?? "") }.joined(separator: "，"))
@@ -96,6 +102,12 @@ struct ContextAssembler {
             lines.append(contentsOf: recalled.map { "  - [#\($0.id) \($0.kind.title) \(clock.dayKey($0.createdAt))] \($0.content)" })
         }
         return "## 此刻（系统自动生成，每轮更新）\n" + lines.joined(separator: "\n")
+    }
+
+    /// Whether the profile already says what to call the user.
+    var knowsName: Bool {
+        let basics = ((try? s.profile.all()) ?? []).filter { $0.section == .basics }
+        return basics.contains { e in ["称呼", "名字", "姓名", "昵称", "名"].contains { e.key.contains($0) } && !e.value.isEmpty }
     }
 
     func autoRecall(_ text: String, now: Date) -> [MemoryStore.Memory] {

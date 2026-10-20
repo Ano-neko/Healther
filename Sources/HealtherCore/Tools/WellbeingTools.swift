@@ -1,7 +1,30 @@
 import Foundation
 
 enum WellbeingTools {
-    static let all: [any AgentTool] = [LogBodyTool(), LogWaterTool(), LogMoodTool(), SetGoalTool()]
+    static let all: [any AgentTool] = [LogBodyTool(), LogWaterTool(), LogMoodTool(), SetGoalTool(), SetTodayCardTool()]
+}
+
+struct SetTodayCardTool: AgentTool {
+    let name = "set_today_card"
+    let description = "设置 App「今日」页顶部的标题和一句话，替代默认的自动文案。和 TA 商量出当天的重点、计划或提醒后用它钉上去；也可以提前写好明天的。title 为空字符串则清除，恢复默认。"
+    let parameters = Schema.object([
+        "title": Schema.string("标题，8 个字以内，如“今天悠着点”“练腿日”"),
+        "detail": Schema.string("一句话，30 个字以内，具体可执行，如“昨晚只睡 5 小时，午后别喝咖啡，11 点前睡”"),
+        "day": Schema.string("日期 YYYY-MM-DD，默认今天"),
+    ], required: ["title"])
+
+    func run(_ args: JSONValue, _ ctx: ToolContext) async throws -> ToolResult {
+        let day = args["day"]?.stringValue.flatMap { ctx.clock.date(fromDayKey: $0) } ?? ctx.now
+        let key = ctx.clock.dayKey(day)
+        let title = (args["title"]?.stringValue ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if title.isEmpty {
+            try ctx.services.dayNotes.set(nil, for: key)
+            return ToolResult(["ok": true, "day": .string(key), "cleared": true], summary: "清除了 \(key) 的今日卡片")
+        }
+        let detail = (args["detail"]?.stringValue ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        try ctx.services.dayNotes.set(DayNote(title: String(title.prefix(16)), detail: String(detail.prefix(60)), updatedAt: ctx.now), for: key)
+        return ToolResult(["ok": true, "day": .string(key), "title": .string(title)], summary: "今日卡片：\(title)")
+    }
 }
 
 struct LogBodyTool: AgentTool {

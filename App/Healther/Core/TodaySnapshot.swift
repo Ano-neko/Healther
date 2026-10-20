@@ -11,6 +11,9 @@ struct TodaySnapshot: Equatable {
     var goals: [WellbeingStore.GoalKind: Double] = [:]
     var trends: [HealthMetric: [SparkPointValue]] = [:]
     var isMock = false
+    var note: DayNote?
+
+    var isToday: Bool { Calendar.current.isDateInToday(date) }
 
     struct SparkPointValue: Equatable {
         var day: Date
@@ -24,12 +27,14 @@ struct TodaySnapshot: Equatable {
     var sleepGoal: Double { goals[.sleepHours] ?? 7.5 }
     var waterGoal: Double { goals[.waterML] ?? 2000 }
 
-    static func load(from s: HealtherServices) async -> TodaySnapshot {
+    /// Loads any day; `day` defaults to today. Trends end on that day.
+    static func load(from s: HealtherServices, day: Date = Date()) async -> TodaySnapshot {
         var snap = TodaySnapshot()
-        let now = Date()
         let clock = s.clock
+        let now = Calendar.current.isDateInToday(day) ? Date() : clock.endOfDay(day).addingTimeInterval(-1)
         let start = clock.startOfDay(now), end = clock.endOfDay(now)
         snap.date = now
+        snap.note = s.dayNotes.note(for: clock.dayKey(now))
         snap.isMock = s.health.isMock
         snap.health = try? await s.health.dailySummary(for: now)
         snap.nutrition = (try? s.meals.totals(from: start, to: end)) ?? .zero

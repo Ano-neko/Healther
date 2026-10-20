@@ -88,6 +88,25 @@ import Testing
         #expect(msgs[3].text == "## 此刻")
     }
 
+    @Test func liveStateAsksForNameUntilProfileHasOne() async throws {
+        let s = try makeServices(ScriptedLLM([]))
+        let a = ContextAssembler(s: s)
+        #expect(await a.liveState(now: Date(), userText: "晚上好").contains("你们还不认识"))
+        try s.profile.set(.basics, "称呼", "阿泽")
+        #expect(await !a.liveState(now: Date(), userText: "晚上好").contains("你们还不认识"))
+    }
+
+    @Test func todayCardIsStoredAndShownInLiveState() async throws {
+        let s = try makeServices(ScriptedLLM([]))
+        let now = Date()
+        let ctx = ToolContext(services: s, now: now, turnID: "t", attachments: [])
+        _ = try await SetTodayCardTool().run(["title": "今天悠着点", "detail": "昨晚睡得少，早点睡"], ctx)
+        #expect(s.dayNotes.note(for: s.clock.dayKey(now))?.title == "今天悠着点")
+        #expect(await ContextAssembler(s: s).liveState(now: now, userText: "").contains("「今天悠着点」"))
+        _ = try await SetTodayCardTool().run(["title": ""], ctx)
+        #expect(s.dayNotes.note(for: s.clock.dayKey(now)) == nil)
+    }
+
     @Test func oldPhotosBecomePlaceholders() throws {
         let s = try makeServices(ScriptedLLM([]))
         var p = ConversationStore.Payload()
