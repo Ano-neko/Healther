@@ -10,6 +10,7 @@ struct MemoryView: View {
     @State private var diary: [EpisodeStore.Episode] = []
     @State private var foods: [FoodCandidate] = []
     @State private var query = ""
+    @State private var exportFile: ExportFile?
 
     var body: some View {
         NavigationStack {
@@ -39,6 +40,18 @@ struct MemoryView: View {
             }
             .navigationTitle("\(model.assistantName)记得的")
             .toolbarTitleDisplayMode(.inlineLarge)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        exportFile = model.exportMemories().map(ExportFile.init)
+                    } label: {
+                        Label("导出为 Markdown", systemImage: "square.and.arrow.up")
+                    }
+                }
+            }
+            .sheet(item: $exportFile) { file in
+                ShareSheet(items: [file.url]).ignoresSafeArea().presentationDetents([.medium, .large])
+            }
             .searchable(text: $query, prompt: "搜索记忆")
             .onChange(of: query) { _, _ in load() }
             .task { load() }
@@ -197,4 +210,20 @@ struct MemoryView: View {
         case .commitment: return Theme.coral
         }
     }
+}
+
+struct ExportFile: Identifiable {
+    let url: URL
+    var id: URL { url }
+}
+
+/// System share sheet, so the export can go to Files, Notes, AirDrop or any other app.
+struct ShareSheet: UIViewControllerRepresentable {
+    var items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

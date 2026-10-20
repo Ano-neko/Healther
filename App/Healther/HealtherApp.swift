@@ -2,7 +2,8 @@ import SwiftUI
 
 @main
 struct HealtherApp: App {
-    @State private var model = AppModel()
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @State private var model = AppModel.shared
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
@@ -13,7 +14,12 @@ struct HealtherApp: App {
                 .tint(Theme.blue)
                 .task { model.bootstrap() }
                 .onChange(of: scenePhase) { _, phase in
-                    if phase == .active { Task { await model.refreshToday() } }
+                    if phase == .active {
+                        Task {
+                            await model.refreshToday()
+                            await model.proactiveTick(inBackground: false)
+                        }
+                    }
                 }
         }
     }
@@ -21,11 +27,11 @@ struct HealtherApp: App {
 
 struct RootView: View {
     @Environment(AppModel.self) private var model
-    @State private var tab = "chat"
     @State private var showOnboarding = false
 
     var body: some View {
-        TabView(selection: $tab) {
+        @Bindable var model = model
+        TabView(selection: $model.tab) {
             Tab("对话", systemImage: "bubble.left.and.text.bubble.right.fill", value: "chat") {
                 ChatView()
             }
@@ -44,16 +50,23 @@ struct RootView: View {
             // healther://tab/<chat|today|memory|settings>
             if url.host() == "tab", let target = url.pathComponents.last,
                ["chat", "today", "memory", "settings"].contains(target) {
-                tab = target
+                model.tab = target
             }
             // healther://day/2026-10-18 opens the Today tab on that day
             if url.host() == "day", let key = url.pathComponents.last,
                let day = try? Date(key, strategy: .iso8601.year().month().day()) {
                 model.showDay(day)
-                tab = "today"
+                model.tab = "today"
             }
         }
-        .onChange(of: model.hasAPIKey, initial: true) { _, has in showOnboarding = !has }
+        .onChange(of: model.settings.onboarded, initial: true) { _, done in showOnboarding = !done }
+        .task {
+            // While the app is open, check once a minute for check-ins whose time has come.
+            while !Task.isCancelled {
+                await model.proactiveTick(inBackground: false)
+                try? await Task.sleep(for: .seconds(60))
+            }
+        }
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingView()
         }

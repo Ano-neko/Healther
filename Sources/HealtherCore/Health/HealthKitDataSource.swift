@@ -71,6 +71,29 @@ public final class HealthKitDataSource: HealthDataSource, @unchecked Sendable {
         ]
     }
 
+    /// Calls `onChange` whenever new sleep samples land (the watch syncs them shortly after you wake up),
+    /// including when the app is in the background or not running.
+    public func observeSleep(_ onChange: @escaping @Sendable () async -> Void) {
+        let type = HKCategoryType(.sleepAnalysis)
+        let query = HKObserverQuery(sampleType: type, predicate: nil) { _, completion, error in
+            let done = CompletionBox(completion)
+            guard error == nil else { done.call(); return }
+            Task {
+                await onChange()
+                done.call()
+            }
+        }
+        store.execute(query)
+        store.enableBackgroundDelivery(for: type, frequency: .immediate) { _, _ in }
+    }
+
+    /// HealthKit's completion handler isn't Sendable; it is safe to call from any thread.
+    private final class CompletionBox: @unchecked Sendable {
+        let f: HKObserverQueryCompletionHandler
+        init(_ f: @escaping HKObserverQueryCompletionHandler) { self.f = f }
+        func call() { f() }
+    }
+
     public func requestAuthorization() async throws {
         guard Self.isAvailable else { throw HealthDataError.unavailable }
         try await store.requestAuthorization(toShare: Self.shareTypes, read: Self.readTypes)

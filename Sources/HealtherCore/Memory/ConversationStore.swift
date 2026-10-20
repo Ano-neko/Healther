@@ -28,6 +28,8 @@ public final class ConversationStore: Sendable {
         public var reasoning: String?
         public var attachments: [Attachment]?
         public var usage: ChatUsage?
+        /// Set on messages she sent on her own (wake greeting, meal check-in, …): the ProactiveKind raw value.
+        public var proactive: String?
         public init() {}
     }
 

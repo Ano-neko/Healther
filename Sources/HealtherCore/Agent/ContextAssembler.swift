@@ -18,7 +18,7 @@ struct ContextAssembler {
     // MARK: Stable prefix
 
     func stablePrefix(now: Date) throws -> String {
-        var parts = [Persona.systemPrompt(name: s.config.assistantName)]
+        var parts = [Persona.systemPrompt(name: s.config.assistantName, profile: s.persona.current)]
         parts.append("## 关于 TA（档案）\n" + (try s.profile.render()))
         let episodes = try s.episodes.recent(5, before: clock.dayKey(now))
         if !episodes.isEmpty {
@@ -101,7 +101,7 @@ struct ContextAssembler {
             lines.append("- 可能相关的记忆（自动检索，未必都相关）：")
             lines.append(contentsOf: recalled.map { "  - [#\($0.id) \($0.kind.title) \(clock.dayKey($0.createdAt))] \($0.content)" })
         }
-        return "## 此刻（系统自动生成，每轮更新）\n" + lines.joined(separator: "\n")
+        return "## 此刻（你的背景感知，系统每轮更新。不要复述，用得上再提）\n" + lines.joined(separator: "\n")
     }
 
     /// Whether the profile already says what to call the user.
@@ -128,11 +128,15 @@ struct ContextAssembler {
             pendingCalls.removeAll()
         }
 
-        // History must start at a user message.
-        let start = msgs.firstIndex { $0.role == .user } ?? msgs.endIndex
+        // History starts at a user message, or at a message she sent on her own.
+        let start = msgs.firstIndex { $0.role == .user || $0.payload.proactive != nil } ?? msgs.endIndex
         for m in msgs[start...] {
             let isCurrent = m.turnID == currentTurnID
             switch m.role {
+            case .assistant where m.payload.proactive != nil:
+                closePending()
+                out.append(.system("（\(clock.stamp(m.createdAt).dropFirst(5))，你主动给 TA 发了下面这条消息）"))
+                out.append(.assistant(m.content))
             case .user:
                 closePending()
                 var parts: [ContentPart] = []

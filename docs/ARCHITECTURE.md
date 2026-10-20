@@ -64,3 +64,13 @@
 | 网络流式 | `URLSessionDataDelegate`（Linux 没有 `bytes(for:)`） | 同左 |
 | 健康数据 | `MockHealthDataSource`（确定性的假数据） | `HealthKitDataSource` |
 | 界面 | 终端 `healther` | SwiftUI |
+
+## 人设与主动消息
+
+- **人设分两层**：`PersonaProfile`（身份核心 + 性格，用户可改，存在用户库 `kv` 里）拼进系统提示词开头；其后是固定的规矩（数据真实、工具用法、记饮食流程、记忆、边界），任何人设都不能覆盖。
+- **主动消息**（`Agent/Proactive.swift`）：
+  - `hello`：首次设置完成后的第一句话，档案里还没有称呼时会问怎么称呼。
+  - `wake`：HealthKit 后台推送（`HKObserverQuery` + background delivery）在睡眠样本同步后唤醒 App；睡眠结束在 4 小时内且今天还没问候过，就写一条并立刻发通知。
+  - `breakfast` / `lunch` / `dinner` / `random`：每天第一次有机会时（起床、后台刷新或打开 App）用一次模型调用把当天剩下的消息都写好，作为本地通知排程；到点后进入对话记录。对应那顿饭已经记录了，就撤回那条。
+  - 模型在历史里看到的是「（时间，你主动给 TA 发了下面这条消息）」加上一条 assistant 消息。
+- **导出**：`MemoryExporter.markdown` 输出档案、目标、长期记忆、前情提要、日记、常吃的食物和人设。

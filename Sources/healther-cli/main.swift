@@ -121,6 +121,11 @@ struct CLI {
                 /diary                 日记        /meals [YYYY-MM-DD]  饮食记录
                 /foods                 个人食物库
                 /compact               强制整理对话   /reflect [YYYY-MM-DD]  写日记
+                /hello                 让伙伴主动打招呼
+                /wake [HH:mm]          模拟起床后的问候（可指定“现在”）
+                /plan [HH:mm]          写好今天剩下的主动消息   /deliver [HH:mm]  投递到点的消息
+                /persona [文件.json]    查看 / 载入人设 {"identity","personality"}
+                /export [路径]          导出核心记忆为 Markdown
                 /think                 显示/隐藏思考过程
                 /usage                 累计 token 用量
                 /quit
@@ -179,6 +184,39 @@ struct CLI {
             case "/usage":
                 let u = services.totalUsage
                 out("累计：输入 \(u.promptTokens) tokens（缓存命中 \(u.cacheHitTokens)），输出 \(u.completionTokens)（含思考 \(u.reasoningTokens)）\n")
+            case "/hello":
+                if let m = try await agent.sayHello() { out(ANSI.bold("\(services.config.assistantName)：") + m.content + "\n") }
+            case "/wake":
+                let now = clock.parse(arg, relativeTo: Date()) ?? Date()
+                if let m = try await agent.greetIfJustWokeUp(now: now) {
+                    out(ANSI.bold("\(services.config.assistantName)：") + m.content + "\n")
+                } else {
+                    out("（没有触发：今天已问候过、没有刚结束的睡眠，或已关闭）\n")
+                }
+            case "/plan":
+                let now = clock.parse(arg, relativeTo: Date()) ?? Date()
+                let planned = try await agent.planDayIfNeeded(now: now)
+                if planned.isEmpty { out("（今天已经写好了，或没有剩余时段）\n") }
+                for m in services.proactive.queue {
+                    out("\(clock.timeString(m.fireAt)) [\(m.kind.rawValue)] \(m.text)\n")
+                }
+            case "/deliver":
+                let now = clock.parse(arg, relativeTo: Date()) ?? Date()
+                for m in try await agent.deliverDue(now: now) { out(ANSI.bold("\(services.config.assistantName)（主动）：") + m.content + "\n") }
+            case "/persona":
+                if !arg.isEmpty {
+                    let path = (arg as NSString).expandingTildeInPath
+                    guard let data = FileManager.default.contents(atPath: path) else { out(ANSI.red("读不到 \(path)\n")); return true }
+                    try services.persona.save(try JSONDecoder().decode(PersonaProfile.self, from: data))
+                    out("已载入。重启 CLI 后生效。\n")
+                }
+                let p = services.persona.current
+                out(ANSI.bold("身份核心\n") + p.identity + "\n\n" + ANSI.bold("性格\n") + p.personality + "\n")
+            case "/export":
+                let md = try MemoryExporter.markdown(services)
+                let path = arg.isEmpty ? MemoryExporter.fileName(services) : (arg as NSString).expandingTildeInPath
+                try md.write(toFile: path, atomically: true, encoding: .utf8)
+                out("已导出到 \(path)（\(md.count) 字）\n")
             default:
                 out("未知命令，/help 查看帮助\n")
             }

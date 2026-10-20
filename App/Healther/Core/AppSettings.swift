@@ -8,6 +8,8 @@ struct AppSettings: Equatable {
     var chatModel: String
     var effort: ReasoningEffort
     var useMockHealth: Bool
+    /// Set once the first-run flow is done; the API key alone no longer decides that.
+    var onboarded: Bool
 
     static var defaults: UserDefaults { .standard }
 
@@ -17,7 +19,8 @@ struct AppSettings: Equatable {
             baseURL: defaults.string(forKey: "baseURL") ?? "https://api.deepseek.com",
             chatModel: defaults.string(forKey: "chatModel") ?? "deepseek-flash",
             effort: ReasoningEffort(rawValue: defaults.string(forKey: "effort") ?? "") ?? .low,
-            useMockHealth: defaults.bool(forKey: "useMockHealth")
+            useMockHealth: defaults.bool(forKey: "useMockHealth"),
+            onboarded: defaults.bool(forKey: "onboarded")
         )
     }
 
@@ -28,6 +31,7 @@ struct AppSettings: Equatable {
         d.set(chatModel, forKey: "chatModel")
         d.set(effort.rawValue, forKey: "effort")
         d.set(useMockHealth, forKey: "useMockHealth")
+        d.set(onboarded, forKey: "onboarded")
     }
 
     /// Cleans a pasted key: drops whitespace and invisible characters, and pulls out

@@ -42,6 +42,8 @@ public final class HealtherServices: Sendable {
     public let kv: KeyValueStore
 
     public var dayNotes: DayNoteStore { DayNoteStore(kv: kv) }
+    public var persona: PersonaStore { PersonaStore(kv: kv) }
+    public var proactive: ProactiveStore { ProactiveStore(kv: kv) }
 
     public var attachmentsDirectory: URL { config.dataDirectory.appendingPathComponent("attachments", isDirectory: true) }
 

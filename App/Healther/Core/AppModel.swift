@@ -44,6 +44,7 @@ struct ToolStep: Identifiable, Equatable {
         case "forget": return "忘掉"
         case "update_profile": return "更新档案"
         case "read_diary": return "翻日记"
+        case "set_today_card": return "钉到今日页"
         default: return tool
         }
     }
@@ -52,7 +53,11 @@ struct ToolStep: Identifiable, Equatable {
 @MainActor
 @Observable
 final class AppModel {
+    /// One model for the whole process: background launches (HealthKit, refresh) use it before any view exists.
+    static let shared = AppModel()
+
     var settings = AppSettings.load()
+    var tab = "chat"
     var hasAPIKey = AppSettings.apiKey?.isEmpty == false
     private(set) var services: HealtherServices?
     private var agent: HealtherAgent?
@@ -78,7 +83,12 @@ final class AppModel {
 
     // MARK: Lifecycle
 
+    /// Builds services once; later calls are no-ops. Use `rebuild()` after settings change.
     func bootstrap() {
+        if services == nil { rebuild() }
+    }
+
+    func rebuild() {
         #if DEBUG
         importDevKeyIfPresent()
         #endif
@@ -95,6 +105,9 @@ final class AppModel {
             let s = try HealtherServices.make(config: config, llm: llm, health: { db in
                 useMock ? MockHealthDataSource(db: db) as any HealthDataSource : HealthKitDataSource()
             })
+            #if DEBUG
+            if importDevPersona(into: s) { return rebuild() }
+            #endif
             services = s
             agent = HealtherAgent(services: s)
             setupError = nil
@@ -122,6 +135,24 @@ final class AppModel {
     }
     #endif
 
+    #if DEBUG
+    /// Development only: Documents/dev-persona.json {"name","identity","personality"} pre-fills the persona.
+    private func importDevPersona(into s: HealtherServices) -> Bool {
+        guard let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return false }
+        let file = docs.appendingPathComponent("dev-persona.json")
+        guard let data = try? Data(contentsOf: file) else { return false }
+        try? FileManager.default.removeItem(at: file)
+        guard let v = try? JSONValue.parse(String(decoding: data, as: UTF8.self)) else { return false }
+        try? s.persona.save(PersonaProfile(identity: v["identity"]?.stringValue ?? "", personality: v["personality"]?.stringValue ?? ""))
+        if let name = v["name"]?.stringValue, !name.isEmpty {
+            settings.assistantName = name
+            settings.save()
+            return true
+        }
+        return false
+    }
+    #endif
+
     func applySettings(_ new: AppSettings, apiKey: String?) {
         settings = new
         settings.save()
@@ -129,7 +160,106 @@ final class AppModel {
             AppSettings.apiKey = AppSettings.sanitizeKey(apiKey)
             hasAPIKey = AppSettings.apiKey?.isEmpty == false
         }
-        bootstrap()
+        rebuild()
+    }
+
+    // MARK: Persona & onboarding
+
+    var persona: PersonaProfile { services?.persona.current ?? .default }
+    var hasCustomPersona: Bool { services?.persona.custom != nil }
+
+    func savePersona(name: String, profile: PersonaProfile?) {
+        try? services?.persona.save(profile)
+        var s = settings
+        s.assistantName = name.trimmingCharacters(in: .whitespaces).isEmpty ? settings.assistantName : name
+        applySettings(s, apiKey: nil)
+    }
+
+    /// Last step of onboarding: save, ask for permissions, and let her say the first words.
+    func finishOnboarding(name: String, persona: PersonaProfile?, apiKey: String?) async {
+        if let persona { try? services?.persona.save(persona) }
+        var s = settings
+        s.assistantName = name.trimmingCharacters(in: .whitespaces).isEmpty ? settings.assistantName : name
+        s.onboarded = true
+        applySettings(s, apiKey: apiKey)
+        await requestHealthAccess()
+        await Notifier.requestAuthorization()
+        startObservingSleep()
+        if let agent, let svc = services, (try? svc.conversation.history(limit: 1).isEmpty) == true, hasAPIKey {
+            isResponding = true
+            orb = .thinking
+            status = "在想…"
+            do {
+                _ = try await agent.sayHello()
+            } catch {
+                lastError = Self.describe(error)
+            }
+            isResponding = false
+            orb = .idle
+            status = ""
+            reloadHistory()
+        }
+        await proactiveTick(inBackground: false)
+    }
+
+    // MARK: Proactive
+
+    private var observingSleep = false
+    private var ticking = false
+
+    /// Registers the HealthKit observer once per launch (needed for background wake-ups too).
+    func startObservingSleep() {
+        guard !observingSleep, settings.onboarded, let hk = services?.health as? HealthKitDataSource else { return }
+        observingSleep = true
+        hk.observeSleep {
+            await AppModel.shared.proactiveTick(inBackground: false)
+        }
+    }
+
+    /// Delivers what is due, greets after waking up, writes the day's check-ins, withdraws
+    /// check-ins for meals already logged. Cheap when there is nothing to do.
+    func proactiveTick(inBackground: Bool) async {
+        guard settings.onboarded, hasAPIKey, let agent, !ticking, !isResponding else { return }
+        ticking = true
+        defer { ticking = false }
+        let background = inBackground || UIApplication.shared.applicationState != .active
+        var changed = false
+        if let delivered = try? await agent.deliverDue(), !delivered.isEmpty { changed = true }
+        if let m = try? await agent.greetIfJustWokeUp() {
+            changed = true
+            if background { await Notifier.post(m.content, from: assistantName) }
+        }
+        if let planned = try? await agent.planDayIfNeeded(), !planned.isEmpty {
+            await Notifier.schedule(planned, from: assistantName)
+        }
+        if let ids = try? await agent.dropAnsweredCheckIns() { Notifier.withdraw(ids) }
+        if changed {
+            reloadHistory()
+            Task { await refreshToday() }
+        }
+    }
+
+    var proactiveSettings: ProactiveSettings { services?.proactive.settings ?? ProactiveSettings() }
+
+    func updateProactiveSettings(_ p: ProactiveSettings) async {
+        guard let s = services, let agent else { return }
+        try? s.proactive.setSettings(p)
+        if let ids = try? await agent.resetPlan() { Notifier.withdraw(ids) }
+        await proactiveTick(inBackground: false)
+    }
+
+    // MARK: Export
+
+    /// Writes the Markdown export to a temporary file named for today.
+    func exportMemories() -> URL? {
+        guard let s = services, let md = try? MemoryExporter.markdown(s) else { return nil }
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(MemoryExporter.fileName(s))
+        do {
+            try md.write(to: url, atomically: true, encoding: .utf8)
+            return url
+        } catch {
+            return nil
+        }
     }
 
     func requestHealthAccess() async {
@@ -201,6 +331,7 @@ final class AppModel {
             orb = .idle
             status = ""
             pendingPhotos.removeAll()
+            if let ids = try? await agent.dropAnsweredCheckIns() { Notifier.withdraw(ids) }
             reloadHistory()
             await refreshToday()
         }
@@ -346,6 +477,8 @@ final class AppModel {
         try? FileManager.default.removeItem(at: dir)
         items = []
         meals = [:]
-        bootstrap()
+        settings.onboarded = false
+        settings.save()
+        rebuild()
     }
 }

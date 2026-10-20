@@ -58,7 +58,13 @@ struct ChatView: View {
                         EmptyChat { suggestion in model.send(text: suggestion) }
                             .padding(.top, 40)
                     }
-                    ForEach(model.items) { item in
+                    ForEach(Array(model.items.enumerated()), id: \.element.id) { index, item in
+                        if let time = timeBreak(at: index) {
+                            Text(Self.timeLabel(time))
+                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                                .foregroundStyle(Theme.tertiaryText)
+                                .padding(.top, 6)
+                        }
                         row(item).id(item.id)
                     }
                     if !model.streamingText.isEmpty {
@@ -82,6 +88,28 @@ struct ChatView: View {
             .onChange(of: model.items.count) { _, _ in withAnimation(.snappy) { proxy.scrollTo("bottom", anchor: .bottom) } }
             .onChange(of: model.streamingText) { _, _ in proxy.scrollTo("bottom", anchor: .bottom) }
         }
+    }
+
+    /// A small time label when a message comes after a pause of half an hour or more (or starts the chat).
+    func timeBreak(at index: Int) -> Date? {
+        func date(_ i: ChatItem) -> Date? {
+            switch i {
+            case .user(_, _, _, let d), .assistant(_, _, let d): return d
+            default: return nil
+            }
+        }
+        guard let d = date(model.items[index]) else { return nil }
+        let previous = model.items[..<index].reversed().lazy.compactMap(date).first
+        guard let previous else { return d }
+        return d.timeIntervalSince(previous) >= 30 * 60 ? d : nil
+    }
+
+    static func timeLabel(_ d: Date) -> String {
+        let cal = Calendar.current
+        let time = d.formatted(date: .omitted, time: .shortened)
+        if cal.isDateInToday(d) { return time }
+        if cal.isDateInYesterday(d) { return "昨天 " + time }
+        return d.formatted(.dateTime.month().day()) + " " + time
     }
 
     @ViewBuilder
@@ -158,17 +186,32 @@ struct AssistantBubble: View {
     var text: String
     var streaming = false
 
+    /// Blank-line separated paragraphs become separate bubbles, the way people send messages.
+    var paragraphs: [String] {
+        text.components(separatedBy: "\n\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
     var body: some View {
-        HStack(alignment: .top) {
-            Text("\(Self.markdown(text))\(Text(streaming ? " ▍" : "").foregroundStyle(Theme.pink))")
-                .font(.system(size: 16))
-                .lineSpacing(3)
-                .textSelection(.enabled)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 11)
-                .glassEffect(.regular, in: .rect(cornerRadius: 20))
-            Spacer(minLength: 36)
+        let parts = paragraphs
+        VStack(alignment: .leading, spacing: 5) {
+            ForEach(Array(parts.enumerated()), id: \.offset) { i, para in
+                let cursor = streaming && i == parts.count - 1
+                HStack(alignment: .top) {
+                    Text("\(Self.markdown(para))\(Text(cursor ? " ▍" : "").foregroundStyle(Theme.pink))")
+                        .font(.system(size: 16))
+                        .lineSpacing(3)
+                        .textSelection(.enabled)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .glassEffect(.regular, in: .rect(cornerRadius: 20))
+                    Spacer(minLength: 36)
+                }
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
         }
+        .animation(.snappy, value: parts.count)
     }
 
     static func markdown(_ s: String) -> AttributedString {
@@ -195,10 +238,43 @@ struct TypingIndicator: View {
     }
 }
 
+/// What she did behind the scenes. Folded into one quiet line; tap to see the steps.
 struct ToolActivity: View {
     var steps: [ToolStep]
+    @State private var expanded = false
+
+    var running: ToolStep? { steps.last { !$0.done } }
 
     var body: some View {
+        if expanded {
+            details.onTapGesture { withAnimation(.snappy) { expanded = false } }
+        } else {
+            HStack(spacing: 6) {
+                if let running {
+                    ProgressView().controlSize(.mini).tint(Theme.blue)
+                    Text(running.title + "…")
+                } else {
+                    Image(systemName: steps.contains(where: \.isError) ? "exclamationmark.circle" : "sparkle")
+                    Text(Self.unique(steps.map(\.title)).joined(separator: " · "))
+                        .lineLimit(1)
+                }
+            }
+            .font(.system(size: 11, design: .rounded))
+            .foregroundStyle(Theme.tertiaryText)
+            .padding(.leading, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .onTapGesture { withAnimation(.snappy) { expanded = true } }
+            .animation(.snappy, value: steps)
+        }
+    }
+
+    static func unique(_ titles: [String]) -> [String] {
+        var seen = Set<String>()
+        return titles.filter { seen.insert($0).inserted }
+    }
+
+    var details: some View {
         VStack(alignment: .leading, spacing: 6) {
             ForEach(steps) { step in
                 HStack(spacing: 8) {
