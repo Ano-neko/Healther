@@ -120,10 +120,15 @@ struct TodayView: View {
         return HStack(spacing: 20) {
             RingGauge(progress: eaten / max(goal, 1), lineWidth: 16, colors: [Theme.amber, Theme.coral, Theme.rose]) {
                 VStack(spacing: 0) {
-                    Text("\(Int(max(goal - eaten, 0).rounded()))")
-                        .font(.metric(30, weight: .bold))
-                        .contentTransition(.numericText())
-                    Text(eaten > goal ? "已超出" : snap.isToday ? "还可以吃" : "低于目标").font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
+                    if !snap.isToday && snap.meals.isEmpty {
+                        Text("—").font(.metric(30, weight: .bold)).foregroundStyle(Theme.tertiaryText)
+                        Text("没有饮食记录").font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
+                    } else {
+                        Text("\(Int(abs(goal - eaten).rounded()))")
+                            .font(.metric(30, weight: .bold))
+                            .contentTransition(.numericText())
+                        Text(eaten > goal ? "已超出" : snap.isToday ? "还可以吃" : "低于目标").font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
+                    }
                 }
             }
             .frame(width: 136, height: 136)
@@ -154,7 +159,8 @@ struct TodayView: View {
 
     func miniRing(_ label: String, value: Double, goal: Double, unit: String, colors: [Color]) -> some View {
         VStack(spacing: 10) {
-            RingGauge(progress: value / max(goal, 1), lineWidth: 8, colors: colors) {
+            // Beating an activity goal is good news: the second lap keeps the ring's own color.
+            RingGauge(progress: value / max(goal, 1), lineWidth: 8, colors: colors, overColor: colors.last ?? Theme.blue) {
                 Text("\(Int((min(value / max(goal, 1), 9.99) * 100).rounded()))%").font(.metric(13, weight: .bold))
             }
             .frame(width: 64, height: 64)
