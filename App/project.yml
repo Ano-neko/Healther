@@ -38,6 +38,9 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIUserInterfaceStyle: Dark
         ITSAppUsesNonExemptEncryption: false
+        CFBundleURLTypes:
+          - CFBundleURLName: io.github.healther
+            CFBundleURLSchemes: [healther]
         NSHealthShareUsageDescription: Healther 读取你的睡眠、活动、心率、HRV、体重等健康数据，让 AI 伙伴了解你的身体状态。数据只保存在本机。
         NSHealthUpdateUsageDescription: Healther 会把你确认的饮食、饮水、体重和情绪记录写入 Apple 健康。
         NSCameraUsageDescription: 拍下你的餐食，让 AI 帮你识别和记录。

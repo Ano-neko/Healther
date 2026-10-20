@@ -36,7 +36,7 @@ struct TodaySnapshot: Equatable {
         snap.meals = (try? s.meals.meals(from: start, to: end)) ?? []
         snap.waterML = (try? s.wellbeing.water(from: start, to: end)) ?? 0
         for g in (try? s.wellbeing.goals()) ?? [] { snap.goals[g.kind] = g.target }
-        for metric in [HealthMetric.restingHeartRate, .heartRateVariability, .bodyMass, .sleepHours, .steps] {
+        for metric in [HealthMetric.restingHeartRate, .heartRateVariability, .bodyMass, .sleepHours, .respiratoryRate] {
             let values = (try? await s.health.dailyValues(metric, days: 7, endingAt: now)) ?? []
             snap.trends[metric] = values.compactMap { v in v.value.map { SparkPointValue(day: v.day, value: $0) } }
         }

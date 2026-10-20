@@ -29,7 +29,7 @@ struct RootView: View {
             Tab("对话", systemImage: "bubble.left.and.text.bubble.right.fill", value: "chat") {
                 ChatView()
             }
-            Tab("今日", systemImage: "circle.hexagongrid.fill", value: "today") {
+            Tab("今日", systemImage: "heart.text.square.fill", value: "today") {
                 TodayView()
             }
             Tab("记忆", systemImage: "brain.head.profile", value: "memory") {
@@ -40,6 +40,13 @@ struct RootView: View {
             }
         }
         .tabBarMinimizeBehavior(.onScrollDown)
+        .onOpenURL { url in
+            // healther://tab/<chat|today|memory|settings>
+            if url.host() == "tab", let target = url.pathComponents.last,
+               ["chat", "today", "memory", "settings"].contains(target) {
+                tab = target
+            }
+        }
         .onChange(of: model.hasAPIKey, initial: true) { _, has in showOnboarding = !has }
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingView()

@@ -66,6 +66,9 @@ final class AppModel {
     var orb: OrbState = .idle
     var status = ""
     var lastError: String?
+    /// Composer contents; lives here so a failed send can hand the text and photos back.
+    var draft = ""
+    var draftPhotos: [UIImage] = []
     private var turnTask: Task<Void, Never>?
 
     // Today
@@ -76,6 +79,9 @@ final class AppModel {
     // MARK: Lifecycle
 
     func bootstrap() {
+        #if DEBUG
+        importDevKeyIfPresent()
+        #endif
         do {
             let support = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
             let dir = support.appendingPathComponent("Healther", isDirectory: true)
@@ -101,11 +107,26 @@ final class AppModel {
         }
     }
 
+    #if DEBUG
+    /// Development only: a key dropped into Documents/dev-api-key (e.g. with
+    /// `devicectl device copy to --domain-type appDataContainer`) is moved into the keychain.
+    private func importDevKeyIfPresent() {
+        guard let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+        let file = docs.appendingPathComponent("dev-api-key")
+        guard let raw = try? String(contentsOf: file, encoding: .utf8) else { return }
+        try? FileManager.default.removeItem(at: file)
+        let key = AppSettings.sanitizeKey(raw)
+        guard !key.isEmpty else { return }
+        AppSettings.apiKey = key
+        hasAPIKey = true
+    }
+    #endif
+
     func applySettings(_ new: AppSettings, apiKey: String?) {
         settings = new
         settings.save()
         if let apiKey {
-            AppSettings.apiKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+            AppSettings.apiKey = AppSettings.sanitizeKey(apiKey)
             hasAPIKey = AppSettings.apiKey?.isEmpty == false
         }
         bootstrap()
@@ -168,8 +189,12 @@ final class AppModel {
                 for try await event in agent.send(UserInput(text: trimmed, images: payloads)) {
                     handle(event, activityID: &activityID)
                 }
+            } catch let e as TurnNotSent {
+                lastError = Self.describe(e.underlying) + "\n消息已放回输入框，改好后再发一次。"
+                if draft.isEmpty { draft = trimmed }
+                if draftPhotos.isEmpty { draftPhotos = images }
             } catch {
-                lastError = "\(error)"
+                lastError = Self.describe(error)
             }
             flushStreaming()
             isResponding = false
@@ -179,6 +204,40 @@ final class AppModel {
             reloadHistory()
             await refreshToday()
         }
+    }
+
+    /// Turns transport and API failures into something a person can act on.
+    static func describe(_ error: Error) -> String {
+        if let e = error as? LLMError {
+            switch e {
+            case .http(401, _), .http(403, _):
+                return "模型服务拒绝了这个 API Key（\(e.statusCode ?? 0)）。去「设置」里重新粘贴一下 Key。"
+            case .http(402, _):
+                return "模型账户余额不足（402），充值后再聊。"
+            case .http(429, _):
+                return "请求太频繁了（429），稍等一会儿再试。"
+            case .http(let s, _) where s >= 500:
+                return "模型服务暂时出了问题（\(s)），过一会儿再试。"
+            case .missingAPIKey:
+                return "先在「设置」里填好 API Key。"
+            case .cancelled:
+                return "已停止。"
+            default:
+                return e.description
+            }
+        }
+        if let u = error as? URLError {
+            switch u.code {
+            case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed, .internationalRoamingOff:
+                return "连不上网络。检查一下网络，或「设置 → Healther → 无线数据」是否允许。"
+            case .timedOut:
+                return "模型响应超时了，再发一次试试。"
+            default:
+                return "网络出错：\(u.localizedDescription)"
+            }
+        }
+        if error is CancellationError { return "已停止。" }
+        return "\(error)"
     }
 
     /// Photos picked for a message that is still in flight (before history reload gives us files).

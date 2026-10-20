@@ -19,6 +19,12 @@ public struct UserInput: Sendable {
     }
 }
 
+/// A turn failed before the model answered. The user message was removed again.
+public struct TurnNotSent: Error, CustomStringConvertible {
+    public let underlying: Error
+    public var description: String { "\(underlying)" }
+}
+
 /// The conversation loop. An actor so turns (and the maintenance that follows them) never overlap.
 public actor HealtherAgent {
     public let services: HealtherServices
@@ -65,48 +71,61 @@ public actor HealtherAgent {
         payload.attachments = attachments.isEmpty ? nil : attachments
         try s.conversation.append(turnID: turnID, role: .user, content: input.text, payload: payload, at: started)
 
-        // 2. Live state is computed once per turn so the prompt stays byte-stable across tool steps.
-        let live = await assembler.liveState(now: started, userText: input.text)
-        let ctx = ToolContext(services: s, now: started, turnID: turnID, attachments: attachments)
         var usage = ChatUsage()
+        var answered = false
+        do {
+            // 2. Live state is computed once per turn so the prompt stays byte-stable across tool steps.
+            let live = await assembler.liveState(now: started, userText: input.text)
+            let ctx = ToolContext(services: s, now: started, turnID: turnID, attachments: attachments)
 
-        // 3. Model ↔ tools loop.
-        for step in 0..<s.config.maxToolSteps {
-            try Task.checkCancellation()
-            let messages = try assembler.build(now: started, currentTurnID: turnID, liveState: live)
-            let lastStep = step == s.config.maxToolSteps - 1
-            let req = ChatRequest(model: s.config.models.chatModel, messages: messages,
-                                  tools: lastStep ? [] : tools.specs, effort: s.config.models.chatEffort)
-            var response: ChatResponse?
-            for try await event in s.llm.stream(req) {
-                switch event {
-                case .reasoningDelta(let r): emit(.reasoning(r))
-                case .textDelta(let t): emit(.text(t))
-                case .toolCallStarted(_, let name): emit(.toolStarted(name: name))
-                case .completed(let r): response = r
+            // 3. Model ↔ tools loop.
+            for step in 0..<s.config.maxToolSteps {
+                try Task.checkCancellation()
+                let messages = try assembler.build(now: started, currentTurnID: turnID, liveState: live)
+                let lastStep = step == s.config.maxToolSteps - 1
+                let req = ChatRequest(model: s.config.models.chatModel, messages: messages,
+                                      tools: lastStep ? [] : tools.specs, effort: s.config.models.chatEffort)
+                var response: ChatResponse?
+                for try await event in s.llm.stream(req) {
+                    switch event {
+                    case .reasoningDelta(let r): emit(.reasoning(r))
+                    case .textDelta(let t): emit(.text(t))
+                    case .toolCallStarted(_, let name): emit(.toolStarted(name: name))
+                    case .completed(let r): response = r
+                    }
+                }
+                guard let response else { throw LLMError.invalidResponse("stream ended without completion") }
+                usage = usage + response.usage
+
+                var p = ConversationStore.Payload()
+                p.toolCalls = response.message.toolCalls.isEmpty ? nil : response.message.toolCalls
+                p.reasoning = response.message.reasoning
+                p.usage = response.usage
+                let saved = try s.conversation.append(turnID: turnID, role: .assistant, content: response.message.text, payload: p, at: now())
+                emit(.assistantMessage(saved))
+                answered = true
+
+                guard !response.message.toolCalls.isEmpty else { break }
+                for call in response.message.toolCalls {
+                    try Task.checkCancellation()
+                    let result = await execute(call, ctx)
+                    for e in result.events { emit(e) }
+                    emit(.toolFinished(name: call.name, summary: result.summary, isError: result.isError))
+                    var tp = ConversationStore.Payload()
+                    tp.toolCallID = call.id
+                    tp.toolName = call.name
+                    try s.conversation.append(turnID: turnID, role: .tool, content: result.content.jsonString(), payload: tp, at: now())
                 }
             }
-            guard let response else { throw LLMError.invalidResponse("stream ended without completion") }
-            usage = usage + response.usage
-
-            var p = ConversationStore.Payload()
-            p.toolCalls = response.message.toolCalls.isEmpty ? nil : response.message.toolCalls
-            p.reasoning = response.message.reasoning
-            p.usage = response.usage
-            let saved = try s.conversation.append(turnID: turnID, role: .assistant, content: response.message.text, payload: p, at: now())
-            emit(.assistantMessage(saved))
-
-            guard !response.message.toolCalls.isEmpty else { break }
-            for call in response.message.toolCalls {
-                try Task.checkCancellation()
-                let result = await execute(call, ctx)
-                for e in result.events { emit(e) }
-                emit(.toolFinished(name: call.name, summary: result.summary, isError: result.isError))
-                var tp = ConversationStore.Payload()
-                tp.toolCallID = call.id
-                tp.toolName = call.name
-                try s.conversation.append(turnID: turnID, role: .tool, content: result.content.jsonString(), payload: tp, at: now())
+        } catch {
+            // Nothing came back yet: take the message back so the user can resend it
+            // without leaving an unanswered duplicate in the history.
+            if !answered {
+                try? s.conversation.deleteTurn(turnID)
+                for a in attachments { try? FileManager.default.removeItem(at: s.attachmentsDirectory.appendingPathComponent(a.file)) }
+                throw TurnNotSent(underlying: error)
             }
+            throw error
         }
 
         s.addUsage(usage)

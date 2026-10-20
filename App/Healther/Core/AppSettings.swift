@@ -30,6 +30,16 @@ struct AppSettings: Equatable {
         d.set(useMockHealth, forKey: "useMockHealth")
     }
 
+    /// Cleans a pasted key: drops whitespace and invisible characters, and pulls out
+    /// the `sk-…` token if it was pasted together with other text.
+    static func sanitizeKey(_ raw: String) -> String {
+        let visible = String(raw.unicodeScalars.filter { $0.isASCII && $0.value > 0x20 && $0.value < 0x7F }.map(Character.init))
+        if let r = visible.range(of: #"sk-[A-Za-z0-9_\-]{16,}"#, options: .regularExpression) {
+            return String(visible[r])
+        }
+        return visible
+    }
+
     static var apiKey: String? {
         get { Keychain.get("api-key") }
         set { Keychain.set(newValue, for: "api-key") }

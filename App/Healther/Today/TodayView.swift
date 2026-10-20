@@ -132,6 +132,16 @@ struct TodayView: View {
                 }
             }
             .glassCard(tint: Theme.lilac)
+        } else if snap.health != nil {
+            HStack(spacing: 12) {
+                Image(systemName: "moon.zzz.fill").font(.system(size: 20)).foregroundStyle(Theme.lilac)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("昨晚没有睡眠记录").font(.system(size: 14, weight: .semibold))
+                    Text("戴着 Apple Watch 入睡，并在「健康 → 睡眠」里打开睡眠追踪")
+                        .font(.system(size: 12)).foregroundStyle(Theme.secondaryText)
+                }
+            }
+            .glassCard(tint: Theme.lilac)
         }
     }
 
@@ -144,8 +154,8 @@ struct TodayView: View {
                       icon: "waveform.path.ecg", color: Theme.lilac, trend: snap.trends[.heartRateVariability])
             VitalTile(title: "体重", value: h?.bodyMass.map { String(format: "%.1f", $0) }, unit: "kg",
                       icon: "scalemass.fill", color: Theme.blue, trend: snap.trends[.bodyMass])
-            VitalTile(title: "步数", value: h?.steps.map { compact($0) }, unit: "",
-                      icon: "figure.walk", color: Theme.amber, trend: snap.trends[.steps])
+            VitalTile(title: "呼吸频率", value: h?.respiratoryRate.map { String(format: "%.1f", $0) }, unit: "次/分",
+                      icon: "lungs.fill", color: Theme.amber, trend: snap.trends[.respiratoryRate])
         }
     }
 
@@ -213,10 +223,13 @@ struct VitalTile: View {
                 Text(value ?? "--").font(.metric(24, weight: .bold))
                 Text(unit).font(.system(size: 11)).foregroundStyle(Theme.tertiaryText)
             }
+            .foregroundStyle(value == nil ? Theme.tertiaryText : .primary)
             if let trend, trend.count > 1 {
                 Sparkline(points: trend.map { SparkPoint(day: $0.day, value: $0.value) }, color: color).frame(height: 28)
             } else {
-                Color.clear.frame(height: 28)
+                Text(value == nil ? "暂无数据" : "数据积累中")
+                    .font(.system(size: 11)).foregroundStyle(Theme.tertiaryText)
+                    .frame(height: 28, alignment: .bottomLeading)
             }
         }
         .glassCard(cornerRadius: 22, padding: 14)

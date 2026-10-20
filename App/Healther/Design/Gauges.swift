@@ -41,12 +41,16 @@ struct MacroBar: View {
 
     var body: some View {
         let p = protein * 4, f = fat * 9, c = carbs * 4
-        let total = max(p + f + c, 1)
+        let total = p + f + c
         GeometryReader { geo in
-            HStack(spacing: 2) {
-                Capsule().fill(Theme.protein).frame(width: max(2, geo.size.width * p / total))
-                Capsule().fill(Theme.fat).frame(width: max(2, geo.size.width * f / total))
-                Capsule().fill(Theme.carbs)
+            if total < 1 {
+                Capsule().fill(Color.white.opacity(0.08))
+            } else {
+                HStack(spacing: 2) {
+                    Capsule().fill(Theme.protein).frame(width: max(2, geo.size.width * p / total))
+                    Capsule().fill(Theme.fat).frame(width: max(2, geo.size.width * f / total))
+                    Capsule().fill(Theme.carbs)
+                }
             }
         }
         .frame(height: 6)
@@ -86,8 +90,10 @@ struct Sparkline: View {
     var color: Color
 
     var body: some View {
-        Chart(points) { p in
-            AreaMark(x: .value("日", p.day), y: .value("值", p.value))
+        let domain = yDomain
+        return Chart(points) { p in
+            // Area starts at the bottom of the visible domain, not at zero, so it never spills out.
+            AreaMark(x: .value("日", p.day), yStart: .value("底", domain.lowerBound), yEnd: .value("值", p.value))
                 .foregroundStyle(LinearGradient(colors: [color.opacity(0.35), color.opacity(0)], startPoint: .top, endPoint: .bottom))
                 .interpolationMethod(.catmullRom)
             LineMark(x: .value("日", p.day), y: .value("值", p.value))
@@ -97,7 +103,8 @@ struct Sparkline: View {
         }
         .chartXAxis(.hidden)
         .chartYAxis(.hidden)
-        .chartYScale(domain: yDomain)
+        .chartYScale(domain: domain)
+        .chartPlotStyle { $0.clipped() }
     }
 
     var yDomain: ClosedRange<Double> {

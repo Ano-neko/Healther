@@ -131,6 +131,11 @@ public enum LLMError: Error, CustomStringConvertible {
     case invalidResponse(String)
     case cancelled
 
+    public var statusCode: Int? {
+        if case .http(let s, _) = self { return s }
+        return nil
+    }
+
     public var description: String {
         switch self {
         case .missingAPIKey: return "没有配置 API Key"

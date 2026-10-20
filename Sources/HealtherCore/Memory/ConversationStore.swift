@@ -84,6 +84,10 @@ public final class ConversationStore: Sendable {
 
     public func setRollingSummary(_ s: String?) throws { try kv.set("conversation.rolling_summary", s) }
 
+    public func deleteTurn(_ turnID: String) throws {
+        try db.execute("DELETE FROM messages WHERE turn_id = ?", [turnID])
+    }
+
     public func clearAll() throws {
         try db.execute("DELETE FROM messages")
         try setRollingSummary(nil)

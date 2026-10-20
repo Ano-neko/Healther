@@ -4,8 +4,6 @@ import SwiftUI
 
 struct ChatView: View {
     @Environment(AppModel.self) private var model
-    @State private var draft = ""
-    @State private var photos: [UIImage] = []
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -17,10 +15,11 @@ struct ChatView: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
-            Composer(text: $draft, photos: $photos, focused: $focused) {
-                model.send(text: draft, images: photos)
-                draft = ""
-                photos = []
+            @Bindable var model = model
+            Composer(text: $model.draft, photos: $model.draftPhotos, focused: $focused) {
+                model.send(text: model.draft, images: model.draftPhotos)
+                model.draft = ""
+                model.draftPhotos = []
             }
         }
     }
@@ -99,7 +98,7 @@ struct ChatView: View {
                 MealCard(meal: meal, interactive: !model.isResponding) {
                     model.confirmMealFromCard(meal)
                 } onEdit: {
-                    draft = "改一下："
+                    model.draft = "改一下："
                     focused = true
                 }
                 .transition(.scale(scale: 0.96).combined(with: .opacity))

@@ -110,10 +110,15 @@ public final class HealthKitDataSource: HealthDataSource, @unchecked Sendable {
         let pred = HKQuery.predicateForSamples(withStart: dayStart.addingTimeInterval(-12 * 3600), end: dayStart.addingTimeInterval(12 * 3600))
         let d = HKSampleQueryDescriptor(predicates: [.categorySample(type: HKCategoryType(.sleepAnalysis), predicate: pred)],
                                         sortDescriptors: [SortDescriptor(\.startDate)])
-        let samples = try await d.result(for: store)
+        var samples = try await d.result(for: store)
         guard !samples.isEmpty else { return nil }
         typealias V = HKCategoryValueSleepAnalysis
         let staged: Set<Int> = [V.asleepCore.rawValue, V.asleepDeep.rawValue, V.asleepREM.rawValue]
+        // iPhone and Watch (and other apps) all write sleep; adding them up double-counts.
+        // Keep one source, preferring the one that recorded stages.
+        if let source = (samples.first { staged.contains($0.value) } ?? samples.first)?.sourceRevision.source {
+            samples = samples.filter { $0.sourceRevision.source == source }
+        }
         let hasStages = samples.contains { staged.contains($0.value) }
         func hours(_ values: Set<Int>) -> Double {
             samples.filter { values.contains($0.value) }.reduce(0) { $0 + $1.endDate.timeIntervalSince($1.startDate) } / 3600

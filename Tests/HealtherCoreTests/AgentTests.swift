@@ -49,6 +49,23 @@ import Testing
         #expect(results.first?.source == .personal)
     }
 
+    @Test func failedTurnIsRolledBackBeforeAnyAnswer() async throws {
+        let llm = ScriptedLLM([])  // first call throws
+        let s = try makeServices(llm)
+        let agent = HealtherAgent(services: s)
+        await #expect(throws: TurnNotSent.self) {
+            for try await _ in agent.send(UserInput(text: "晚上好")) {}
+        }
+        #expect(try s.conversation.history(limit: 10).isEmpty)
+
+        // Once the model has answered, a later failure keeps the turn.
+        llm.enqueue([.assistant("", toolCalls: [toolCall("get_meals", [:], id: "x")])])
+        await #expect(throws: LLMError.self) {
+            for try await _ in agent.send(UserInput(text: "今天吃了啥")) {}
+        }
+        #expect(try s.conversation.history(limit: 10).first?.content == "今天吃了啥")
+    }
+
     @Test func badToolArgumentsBecomeErrorsNotCrashes() async throws {
         let llm = ScriptedLLM([
             .assistant("", toolCalls: [ToolCall(id: "x", name: "draft_meal", arguments: "{not json")]),
