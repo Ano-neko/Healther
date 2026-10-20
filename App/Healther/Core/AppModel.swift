@@ -87,7 +87,7 @@ final class AppModel {
                                              apiKey: AppSettings.apiKey ?? "")
             let useMock = settings.useMockHealth || !HealthKitDataSource.isAvailable
             let s = try HealtherServices.make(config: config, llm: llm, health: { db in
-                useMock ? MockHealthDataSource(db: db) : HealthKitDataSource()
+                useMock ? MockHealthDataSource(db: db) as any HealthDataSource : HealthKitDataSource()
             })
             services = s
             agent = HealtherAgent(services: s)

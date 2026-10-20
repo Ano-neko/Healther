@@ -160,7 +160,7 @@ struct AssistantBubble: View {
 
     var body: some View {
         HStack(alignment: .top) {
-            (Text(Self.markdown(text)) + Text(streaming ? " ▍" : "").foregroundStyle(Theme.mint))
+            Text("\(Self.markdown(text))\(Text(streaming ? " ▍" : "").foregroundStyle(Theme.mint))")
                 .font(.system(size: 16))
                 .lineSpacing(3)
                 .textSelection(.enabled)

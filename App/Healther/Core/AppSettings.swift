@@ -9,7 +9,7 @@ struct AppSettings: Equatable {
     var effort: ReasoningEffort
     var useMockHealth: Bool
 
-    static let defaults = UserDefaults.standard
+    static var defaults: UserDefaults { .standard }
 
     static func load() -> AppSettings {
         AppSettings(

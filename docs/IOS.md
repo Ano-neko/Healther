@@ -3,7 +3,7 @@
 需要：macOS + Xcode 26（iOS 26 SDK）、[XcodeGen](https://github.com/yonaskolb/XcodeGen)、一个 Apple ID（免费的 Personal Team 就够）。
 
 ```bash
-brew install xcodegen
+brew install xcodegen      # 或从 GitHub Releases 下载 xcodegen.zip
 cd App
 cp Config/Local.example.xcconfig Config/Local.xcconfig   # 填入你的 Team ID 和 Bundle ID
 xcodegen                                                # 生成 Healther.xcodeproj（已被 git 忽略）
@@ -16,7 +16,9 @@ open Healther.xcodeproj
 
 - 用免费 Apple ID 安装的 App 每 **7 天**需要重新从 Xcode 安装一次（证书到期），数据不会丢。
 - 免费账号不支持 iCloud 等能力；Healther 本来就不用。
-- 开启 HealthKit 能力需要在 Xcode 的 Signing & Capabilities 中能看到 HealthKit；如果免费账号无法签名，请在 Issue 中反馈。
+- 免费账号可以签出带 HealthKit 能力的描述文件（已在 Xcode 27 / iOS 26 上验证）。
+- Bundle ID 必须全局唯一，请在 `Local.xcconfig` 里换成你自己的。
+- 通过 SSH 用 `xcodebuild` 签名时若报 `errSecInternalComponent`，是登录钥匙串在 SSH 会话里处于锁定状态，先执行 `security unlock-keychain ~/Library/Keychains/login.keychain-db`。
 
 ## 模拟器
 

@@ -82,7 +82,7 @@ struct SettingsView: View {
                         .font(.footnote).foregroundStyle(.secondary)
                     Text("Healther 不是医疗器械，不提供诊断或治疗建议。")
                         .font(.footnote).foregroundStyle(.secondary)
-                    Link(destination: URL(string: "https://github.com/")!) {
+                    Link(destination: URL(string: "https://github.com/Ano-neko/Healther")!) {
                         Label("开源代码（MIT）", systemImage: "chevron.left.forwardslash.chevron.right")
                     }
                 }

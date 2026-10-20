@@ -7,7 +7,7 @@ import FoundationNetworking
 public struct OpenFoodFactsSource: FoodDataSource {
     public let idPrefixes = ["off"]
     var base = URL(string: "https://world.openfoodfacts.org")!
-    var userAgent = "Healther/0.1 (personal health app; https://github.com/)"
+    var userAgent = "Healther/0.1 (https://github.com/Ano-neko/Healther)"
 
     public init() {}
 
