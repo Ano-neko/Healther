@@ -33,7 +33,7 @@ struct MealCard: View {
                 if isDraft {
                     Chip(text: "待确认", color: Theme.amber, systemImage: "hourglass")
                 } else {
-                    Chip(text: "已记录", color: Theme.pink, systemImage: "checkmark")
+                    Chip(text: "已记录", color: Theme.blue, systemImage: "checkmark")
                 }
             }
 
@@ -95,7 +95,7 @@ struct MealCard: View {
                 .disabled(!interactive)
             }
         }
-        .glassCard(cornerRadius: 26, padding: 18, tint: isDraft ? Theme.amber : Theme.pink)
+        .glassCard(cornerRadius: 26, padding: 18, tint: isDraft ? Theme.amber : Theme.blue)
         .animation(.snappy, value: meal)
     }
 

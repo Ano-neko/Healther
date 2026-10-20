@@ -5,7 +5,8 @@ enum Theme {
     static let surface = Color.white.opacity(0.06)
     static let hairline = Color.white.opacity(0.10)
 
-    // Brand: pink #FF8899 + blue #7799CC, with lilac / deep blue bridging them.
+    // Brand: blue #7799CC is the primary color; pink #FF8899 is a sparing accent.
+    // Lilac and deep blue bridge the two.
     static let pink = Color(red: 1.00, green: 0.533, blue: 0.60)
     static let blue = Color(red: 0.467, green: 0.60, blue: 0.80)
     static let lilac = Color(red: 0.70, green: 0.60, blue: 0.84)
@@ -21,7 +22,7 @@ enum Theme {
     static let secondaryText = Color.white.opacity(0.62)
     static let tertiaryText = Color.white.opacity(0.38)
 
-    static let brandGradient = LinearGradient(colors: [pink, blue, lilac], startPoint: .topLeading, endPoint: .bottomTrailing)
+    static let brandGradient = LinearGradient(colors: [blue, lilac, pink], startPoint: .topLeading, endPoint: .bottomTrailing)
     static let energyGradient = AngularGradient(colors: [amber, coral, rose, amber], center: .center)
 }
 
@@ -71,9 +72,9 @@ struct AuroraBackground: View {
                     width: 3, height: 3,
                     points: Self.points(t),
                     colors: [
-                        Theme.blue.opacity(0.45 * intensity), Theme.background, Theme.pink.opacity(0.30 * intensity),
-                        Theme.background, Theme.lilac.opacity(0.16 * intensity), Theme.background,
-                        Theme.pink.opacity(0.20 * intensity), Theme.background, Theme.blue.opacity(0.32 * intensity),
+                        Theme.blue.opacity(0.50 * intensity), Theme.background, Theme.lilac.opacity(0.24 * intensity),
+                        Theme.background, Theme.pink.opacity(0.10 * intensity), Theme.background,
+                        Theme.deepBlue.opacity(0.40 * intensity), Theme.background, Theme.blue.opacity(0.32 * intensity),
                     ]
                 )
                 .blur(radius: 60)
@@ -87,7 +88,7 @@ struct AuroraBackground: View {
 /// Small rounded tag.
 struct Chip: View {
     var text: String
-    var color: Color = Theme.pink
+    var color: Color = Theme.blue
     var systemImage: String?
 
     var body: some View {

@@ -15,9 +15,9 @@ struct TodayView: View {
                         greeting
                         energyHero
                         HStack(spacing: 12) {
-                            miniRing("步数", value: snap.health?.steps ?? 0, goal: snap.stepsGoal, unit: "", colors: [Theme.pink, Theme.blue])
-                            miniRing("锻炼", value: snap.health?.exerciseMinutes ?? 0, goal: snap.exerciseGoal, unit: "分", colors: [Theme.blue, Theme.deepBlue])
-                            miniRing("饮水", value: snap.waterML, goal: snap.waterGoal, unit: "ml", colors: [Theme.blue, Theme.protein])
+                            miniRing("步数", value: snap.health?.steps ?? 0, goal: snap.stepsGoal, unit: "", colors: [Theme.blue, Theme.lilac])
+                            miniRing("锻炼", value: snap.health?.exerciseMinutes ?? 0, goal: snap.exerciseGoal, unit: "分", colors: [Theme.lilac, Theme.pink])
+                            miniRing("饮水", value: snap.waterML, goal: snap.waterGoal, unit: "ml", colors: [Theme.protein, Theme.blue])
                         }
                         sleepCard
                         vitalsGrid
@@ -75,7 +75,7 @@ struct TodayView: View {
             VStack(alignment: .leading, spacing: 12) {
                 stat("已摄入", "\(Int(eaten.rounded()))", "kcal", Theme.amber)
                 stat("目标", "\(Int(goal.rounded()))", "kcal", Theme.secondaryText)
-                stat("活动消耗", "\(Int(burned.rounded()))", "kcal", Theme.pink)
+                stat("活动消耗", "\(Int(burned.rounded()))", "kcal", Theme.blue)
                 VStack(alignment: .leading, spacing: 6) {
                     MacroBar(protein: snap.nutrition.protein, fat: snap.nutrition.fat, carbs: snap.nutrition.carbs)
                     Text("蛋白 \(Int(snap.nutrition.protein))/\(Int(snap.proteinGoal))g")
@@ -141,7 +141,7 @@ struct TodayView: View {
             VitalTile(title: "静息心率", value: h?.restingHeartRate.map { "\(Int($0.rounded()))" }, unit: "bpm",
                       icon: "heart.fill", color: Theme.rose, trend: snap.trends[.restingHeartRate])
             VitalTile(title: "HRV", value: h?.hrv.map { "\(Int($0.rounded()))" }, unit: "ms",
-                      icon: "waveform.path.ecg", color: Theme.pink, trend: snap.trends[.heartRateVariability])
+                      icon: "waveform.path.ecg", color: Theme.lilac, trend: snap.trends[.heartRateVariability])
             VitalTile(title: "体重", value: h?.bodyMass.map { String(format: "%.1f", $0) }, unit: "kg",
                       icon: "scalemass.fill", color: Theme.blue, trend: snap.trends[.bodyMass])
             VitalTile(title: "步数", value: h?.steps.map { compact($0) }, unit: "",

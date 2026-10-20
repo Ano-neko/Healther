@@ -72,7 +72,7 @@ struct MemoryView: View {
                     Text(sec.title).sectionLabel()
                     ForEach(entries, id: \.key) { e in
                         HStack(alignment: .top) {
-                            Text(e.key).font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.pink).frame(width: 72, alignment: .leading)
+                            Text(e.key).font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.blue).frame(width: 72, alignment: .leading)
                             Text(e.value).font(.system(size: 14))
                             Spacer()
                         }

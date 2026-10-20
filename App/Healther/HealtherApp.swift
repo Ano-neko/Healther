@@ -10,7 +10,7 @@ struct HealtherApp: App {
             RootView()
                 .environment(model)
                 .preferredColorScheme(.dark)
-                .tint(Theme.pink)
+                .tint(Theme.blue)
                 .task { model.bootstrap() }
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .active { Task { await model.refreshToday() } }

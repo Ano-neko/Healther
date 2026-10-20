@@ -21,12 +21,14 @@ def pixel(x, y):
     R = 0.56
     # outer glow
     glow = math.exp(-max(0, r - R) * 7.5) * 0.55
-    col = mix(col, mix(PINK, BLUE, clamp((v + 1) / 2)), glow)
+    col = mix(col, mix(BLUE, LILAC, clamp((v + 1) / 2)), glow)
     if r <= R:
         # fluid interior: warped gradient field
         w = 0.5 + 0.5 * math.sin(3.0 * u + 2.2 * v + 1.3 * math.sin(4 * v + 3 * u * v))
         w2 = 0.5 + 0.5 * math.sin(-2.4 * u + 3.1 * v + 0.8)
-        inner = mix(mix(PINK, BLUE, w), mix(LILAC, DEEP_BLUE, w2), smooth(0.1, 0.9, (u - v + 1) / 2) * 0.75)
+        inner = mix(mix(BLUE, DEEP_BLUE, w * 0.7), LILAC, w2 * 0.25)
+        # a soft pink glint toward the lower-left rim
+        inner = mix(inner, PINK, math.exp(-((u + 0.36) ** 2 + (v - 0.30) ** 2) / 0.09) * 0.5)
         # spherical shading + rim
         z = math.sqrt(max(0.0, R * R - r * r)) / R
         inner = mix(inner, BG, (1 - z) ** 3 * 0.45)

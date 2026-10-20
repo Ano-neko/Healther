@@ -34,7 +34,7 @@ struct ChatView: View {
                 Text(model.assistantName).font(.system(size: 17, weight: .semibold, design: .rounded))
                 Text(model.status.isEmpty ? (model.hasAPIKey ? "在你身边" : "未连接") : model.status)
                     .font(.system(size: 12, design: .rounded))
-                    .foregroundStyle(model.isResponding ? Theme.pink : Theme.secondaryText)
+                    .foregroundStyle(model.isResponding ? Theme.blue : Theme.secondaryText)
                     .contentTransition(.opacity)
                     .animation(.easeInOut, value: model.status)
             }
@@ -134,7 +134,7 @@ struct UserBubble: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
                     .background(
-                        LinearGradient(colors: [Theme.pink.opacity(0.55), Theme.blue.opacity(0.45)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                        LinearGradient(colors: [Theme.blue.opacity(0.55), Theme.deepBlue.opacity(0.50)], startPoint: .topLeading, endPoint: .bottomTrailing),
                         in: .rect(cornerRadius: 20)
                     )
                     .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(.white.opacity(0.18), lineWidth: 0.5))
@@ -206,7 +206,7 @@ struct ToolActivity: View {
                     ZStack {
                         if step.done {
                             Image(systemName: step.isError ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
-                                .foregroundStyle(step.isError ? Theme.coral : Theme.pink)
+                                .foregroundStyle(step.isError ? Theme.coral : Theme.blue)
                         } else {
                             ProgressView().controlSize(.mini).tint(Theme.amber)
                         }
@@ -261,7 +261,7 @@ struct EmptyChat: View {
                 ForEach(suggestions) { s in
                     Button { onSuggestion(s.text) } label: {
                         HStack {
-                            Image(systemName: s.icon).foregroundStyle(Theme.pink).frame(width: 22)
+                            Image(systemName: s.icon).foregroundStyle(Theme.blue).frame(width: 22)
                             Text(s.text).foregroundStyle(.white)
                             Spacer()
                             Image(systemName: "arrow.up.right").font(.caption).foregroundStyle(Theme.tertiaryText)
