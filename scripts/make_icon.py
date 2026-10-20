@@ -5,7 +5,7 @@ import math, struct, sys, zlib
 
 N = 1024
 BG = (5, 8, 16)
-MINT, CYAN, VIOLET, INDIGO = (94, 242, 199), (82, 199, 255), (143, 122, 255), (77, 92, 242)
+PINK, BLUE, LILAC, DEEP_BLUE = (255, 136, 153), (119, 153, 204), (179, 153, 214), (74, 95, 153)
 
 def mix(a, b, t): return tuple(a[i] + (b[i] - a[i]) * t for i in range(3))
 def clamp(x): return max(0.0, min(1.0, x))
@@ -16,17 +16,17 @@ def pixel(x, y):
     u, v = (x + 0.5) / N * 2 - 1, (y + 0.5) / N * 2 - 1
     r = math.hypot(u, v)
     # background: faint indigo vignette at top-left, violet bottom-right
-    col = mix(BG, INDIGO, 0.22 * clamp(1 - math.hypot(u + 0.7, v + 0.8) / 1.4))
-    col = mix(col, VIOLET, 0.12 * clamp(1 - math.hypot(u - 0.8, v - 0.9) / 1.2))
+    col = mix(BG, DEEP_BLUE, 0.22 * clamp(1 - math.hypot(u + 0.7, v + 0.8) / 1.4))
+    col = mix(col, LILAC, 0.12 * clamp(1 - math.hypot(u - 0.8, v - 0.9) / 1.2))
     R = 0.56
     # outer glow
     glow = math.exp(-max(0, r - R) * 7.5) * 0.55
-    col = mix(col, mix(MINT, CYAN, clamp((v + 1) / 2)), glow)
+    col = mix(col, mix(PINK, BLUE, clamp((v + 1) / 2)), glow)
     if r <= R:
         # fluid interior: warped gradient field
         w = 0.5 + 0.5 * math.sin(3.0 * u + 2.2 * v + 1.3 * math.sin(4 * v + 3 * u * v))
         w2 = 0.5 + 0.5 * math.sin(-2.4 * u + 3.1 * v + 0.8)
-        inner = mix(mix(MINT, CYAN, w), mix(VIOLET, INDIGO, w2), smooth(0.1, 0.9, (u - v + 1) / 2) * 0.75)
+        inner = mix(mix(PINK, BLUE, w), mix(LILAC, DEEP_BLUE, w2), smooth(0.1, 0.9, (u - v + 1) / 2) * 0.75)
         # spherical shading + rim
         z = math.sqrt(max(0.0, R * R - r * r)) / R
         inner = mix(inner, BG, (1 - z) ** 3 * 0.45)

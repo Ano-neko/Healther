@@ -15,9 +15,9 @@ struct TodayView: View {
                         greeting
                         energyHero
                         HStack(spacing: 12) {
-                            miniRing("步数", value: snap.health?.steps ?? 0, goal: snap.stepsGoal, unit: "", colors: [Theme.mint, Theme.cyan])
-                            miniRing("锻炼", value: snap.health?.exerciseMinutes ?? 0, goal: snap.exerciseGoal, unit: "分", colors: [Theme.cyan, Theme.indigo])
-                            miniRing("饮水", value: snap.waterML, goal: snap.waterGoal, unit: "ml", colors: [Theme.cyan, Theme.protein])
+                            miniRing("步数", value: snap.health?.steps ?? 0, goal: snap.stepsGoal, unit: "", colors: [Theme.pink, Theme.blue])
+                            miniRing("锻炼", value: snap.health?.exerciseMinutes ?? 0, goal: snap.exerciseGoal, unit: "分", colors: [Theme.blue, Theme.deepBlue])
+                            miniRing("饮水", value: snap.waterML, goal: snap.waterGoal, unit: "ml", colors: [Theme.blue, Theme.protein])
                         }
                         sleepCard
                         vitalsGrid
@@ -75,7 +75,7 @@ struct TodayView: View {
             VStack(alignment: .leading, spacing: 12) {
                 stat("已摄入", "\(Int(eaten.rounded()))", "kcal", Theme.amber)
                 stat("目标", "\(Int(goal.rounded()))", "kcal", Theme.secondaryText)
-                stat("活动消耗", "\(Int(burned.rounded()))", "kcal", Theme.mint)
+                stat("活动消耗", "\(Int(burned.rounded()))", "kcal", Theme.pink)
                 VStack(alignment: .leading, spacing: 6) {
                     MacroBar(protein: snap.nutrition.protein, fat: snap.nutrition.fat, carbs: snap.nutrition.carbs)
                     Text("蛋白 \(Int(snap.nutrition.protein))/\(Int(snap.proteinGoal))g")
@@ -117,7 +117,7 @@ struct TodayView: View {
         if let s = snap.health?.sleep {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Label("昨晚睡眠", systemImage: "moon.zzz.fill").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.violet)
+                    Label("昨晚睡眠", systemImage: "moon.zzz.fill").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.lilac)
                     Spacer()
                     Text("\(s.start.formatted(date: .omitted, time: .shortened)) → \(s.end.formatted(date: .omitted, time: .shortened))")
                         .font(.metric(12, weight: .regular)).foregroundStyle(Theme.secondaryText)
@@ -128,10 +128,10 @@ struct TodayView: View {
                 }
                 SleepStagesBar(sleep: s)
                 if let trend = snap.trends[.sleepHours], trend.count > 1 {
-                    Sparkline(points: trend.map { SparkPoint(day: $0.day, value: $0.value) }, color: Theme.violet).frame(height: 36)
+                    Sparkline(points: trend.map { SparkPoint(day: $0.day, value: $0.value) }, color: Theme.lilac).frame(height: 36)
                 }
             }
-            .glassCard(tint: Theme.violet)
+            .glassCard(tint: Theme.lilac)
         }
     }
 
@@ -141,9 +141,9 @@ struct TodayView: View {
             VitalTile(title: "静息心率", value: h?.restingHeartRate.map { "\(Int($0.rounded()))" }, unit: "bpm",
                       icon: "heart.fill", color: Theme.rose, trend: snap.trends[.restingHeartRate])
             VitalTile(title: "HRV", value: h?.hrv.map { "\(Int($0.rounded()))" }, unit: "ms",
-                      icon: "waveform.path.ecg", color: Theme.mint, trend: snap.trends[.heartRateVariability])
+                      icon: "waveform.path.ecg", color: Theme.pink, trend: snap.trends[.heartRateVariability])
             VitalTile(title: "体重", value: h?.bodyMass.map { String(format: "%.1f", $0) }, unit: "kg",
-                      icon: "scalemass.fill", color: Theme.cyan, trend: snap.trends[.bodyMass])
+                      icon: "scalemass.fill", color: Theme.blue, trend: snap.trends[.bodyMass])
             VitalTile(title: "步数", value: h?.steps.map { compact($0) }, unit: "",
                       icon: "figure.walk", color: Theme.amber, trend: snap.trends[.steps])
         }
@@ -236,9 +236,9 @@ struct SleepStagesBar: View {
     var stages: [Stage] {
         let core = sleep.coreHours ?? max(0, sleep.asleepHours - (sleep.deepHours ?? 0) - (sleep.remHours ?? 0))
         return [
-            Stage(name: "深睡", hours: sleep.deepHours ?? 0, color: Theme.indigo),
-            Stage(name: "核心", hours: core, color: Theme.violet),
-            Stage(name: "REM", hours: sleep.remHours ?? 0, color: Theme.cyan),
+            Stage(name: "深睡", hours: sleep.deepHours ?? 0, color: Theme.deepBlue),
+            Stage(name: "核心", hours: core, color: Theme.lilac),
+            Stage(name: "REM", hours: sleep.remHours ?? 0, color: Theme.blue),
             Stage(name: "清醒", hours: sleep.awakeHours ?? 0, color: Theme.coral),
         ]
     }

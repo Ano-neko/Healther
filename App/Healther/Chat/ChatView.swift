@@ -34,7 +34,7 @@ struct ChatView: View {
                 Text(model.assistantName).font(.system(size: 17, weight: .semibold, design: .rounded))
                 Text(model.status.isEmpty ? (model.hasAPIKey ? "在你身边" : "未连接") : model.status)
                     .font(.system(size: 12, design: .rounded))
-                    .foregroundStyle(model.isResponding ? Theme.mint : Theme.secondaryText)
+                    .foregroundStyle(model.isResponding ? Theme.pink : Theme.secondaryText)
                     .contentTransition(.opacity)
                     .animation(.easeInOut, value: model.status)
             }
@@ -134,10 +134,11 @@ struct UserBubble: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
                     .background(
-                        LinearGradient(colors: [Theme.mint.opacity(0.85), Theme.cyan.opacity(0.75)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                        LinearGradient(colors: [Theme.pink.opacity(0.55), Theme.blue.opacity(0.45)], startPoint: .topLeading, endPoint: .bottomTrailing),
                         in: .rect(cornerRadius: 20)
                     )
-                    .foregroundStyle(Color.black.opacity(0.85))
+                    .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(.white.opacity(0.18), lineWidth: 0.5))
+                    .foregroundStyle(.white)
             }
         }
         .frame(maxWidth: .infinity, alignment: .trailing)
@@ -160,7 +161,7 @@ struct AssistantBubble: View {
 
     var body: some View {
         HStack(alignment: .top) {
-            Text("\(Self.markdown(text))\(Text(streaming ? " ▍" : "").foregroundStyle(Theme.mint))")
+            Text("\(Self.markdown(text))\(Text(streaming ? " ▍" : "").foregroundStyle(Theme.pink))")
                 .font(.system(size: 16))
                 .lineSpacing(3)
                 .textSelection(.enabled)
@@ -183,7 +184,7 @@ struct TypingIndicator: View {
             HStack(spacing: 5) {
                 ForEach(0..<3) { i in
                     Circle()
-                        .fill(Theme.mint)
+                        .fill(Theme.pink)
                         .frame(width: 7, height: 7)
                         .opacity(0.35 + 0.65 * max(0, sin(t * 5 - Double(i) * 0.7)))
                 }
@@ -205,7 +206,7 @@ struct ToolActivity: View {
                     ZStack {
                         if step.done {
                             Image(systemName: step.isError ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
-                                .foregroundStyle(step.isError ? Theme.coral : Theme.mint)
+                                .foregroundStyle(step.isError ? Theme.coral : Theme.pink)
                         } else {
                             ProgressView().controlSize(.mini).tint(Theme.amber)
                         }
@@ -260,7 +261,7 @@ struct EmptyChat: View {
                 ForEach(suggestions) { s in
                     Button { onSuggestion(s.text) } label: {
                         HStack {
-                            Image(systemName: s.icon).foregroundStyle(Theme.mint).frame(width: 22)
+                            Image(systemName: s.icon).foregroundStyle(Theme.pink).frame(width: 22)
                             Text(s.text).foregroundStyle(.white)
                             Spacer()
                             Image(systemName: "arrow.up.right").font(.caption).foregroundStyle(Theme.tertiaryText)

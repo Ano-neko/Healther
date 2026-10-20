@@ -5,13 +5,14 @@ enum Theme {
     static let surface = Color.white.opacity(0.06)
     static let hairline = Color.white.opacity(0.10)
 
-    static let mint = Color(red: 0.37, green: 0.95, blue: 0.78)
-    static let cyan = Color(red: 0.32, green: 0.78, blue: 1.00)
-    static let violet = Color(red: 0.56, green: 0.48, blue: 1.00)
-    static let indigo = Color(red: 0.30, green: 0.36, blue: 0.95)
+    // Brand: pink #FF8899 + blue #7799CC, with lilac / deep blue bridging them.
+    static let pink = Color(red: 1.00, green: 0.533, blue: 0.60)
+    static let blue = Color(red: 0.467, green: 0.60, blue: 0.80)
+    static let lilac = Color(red: 0.70, green: 0.60, blue: 0.84)
+    static let deepBlue = Color(red: 0.29, green: 0.37, blue: 0.60)
     static let coral = Color(red: 1.00, green: 0.52, blue: 0.40)
     static let amber = Color(red: 1.00, green: 0.78, blue: 0.36)
-    static let rose = Color(red: 1.00, green: 0.38, blue: 0.56)
+    static let rose = Color(red: 1.00, green: 0.36, blue: 0.42)
 
     static let protein = Color(red: 0.36, green: 0.80, blue: 1.00)
     static let fat = Color(red: 1.00, green: 0.74, blue: 0.32)
@@ -20,7 +21,7 @@ enum Theme {
     static let secondaryText = Color.white.opacity(0.62)
     static let tertiaryText = Color.white.opacity(0.38)
 
-    static let brandGradient = LinearGradient(colors: [mint, cyan, violet], startPoint: .topLeading, endPoint: .bottomTrailing)
+    static let brandGradient = LinearGradient(colors: [pink, blue, lilac], startPoint: .topLeading, endPoint: .bottomTrailing)
     static let energyGradient = AngularGradient(colors: [amber, coral, rose, amber], center: .center)
 }
 
@@ -70,9 +71,9 @@ struct AuroraBackground: View {
                     width: 3, height: 3,
                     points: Self.points(t),
                     colors: [
-                        Theme.indigo.opacity(0.55 * intensity), Theme.background, Theme.violet.opacity(0.35 * intensity),
-                        Theme.background, Theme.cyan.opacity(0.18 * intensity), Theme.background,
-                        Theme.mint.opacity(0.22 * intensity), Theme.background, Theme.indigo.opacity(0.30 * intensity),
+                        Theme.blue.opacity(0.45 * intensity), Theme.background, Theme.pink.opacity(0.30 * intensity),
+                        Theme.background, Theme.lilac.opacity(0.16 * intensity), Theme.background,
+                        Theme.pink.opacity(0.20 * intensity), Theme.background, Theme.blue.opacity(0.32 * intensity),
                     ]
                 )
                 .blur(radius: 60)
@@ -86,7 +87,7 @@ struct AuroraBackground: View {
 /// Small rounded tag.
 struct Chip: View {
     var text: String
-    var color: Color = Theme.mint
+    var color: Color = Theme.pink
     var systemImage: String?
 
     var body: some View {

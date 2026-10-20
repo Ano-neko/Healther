@@ -68,7 +68,7 @@ struct Composer: View {
                             .frame(width: 44, height: 44)
                     }
                     .disabled(!canSend)
-                    .glassEffect(canSend ? .regular.tint(Theme.mint.opacity(0.7)).interactive() : .regular, in: .circle)
+                    .glassEffect(canSend ? .regular.tint(Theme.pink.opacity(0.7)).interactive() : .regular, in: .circle)
                     .animation(.snappy, value: canSend)
                 }
             }

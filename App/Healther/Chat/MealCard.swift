@@ -33,7 +33,7 @@ struct MealCard: View {
                 if isDraft {
                     Chip(text: "待确认", color: Theme.amber, systemImage: "hourglass")
                 } else {
-                    Chip(text: "已记录", color: Theme.mint, systemImage: "checkmark")
+                    Chip(text: "已记录", color: Theme.pink, systemImage: "checkmark")
                 }
             }
 
@@ -87,6 +87,7 @@ struct MealCard: View {
                     .buttonStyle(.glass)
                     Button(action: onConfirm) {
                         Label("确认记录", systemImage: "checkmark").frame(maxWidth: .infinity).fontWeight(.semibold)
+                            .foregroundStyle(Theme.background)
                     }
                     .buttonStyle(.glassProminent)
                 }
@@ -94,7 +95,7 @@ struct MealCard: View {
                 .disabled(!interactive)
             }
         }
-        .glassCard(cornerRadius: 26, padding: 18, tint: isDraft ? Theme.amber : Theme.mint)
+        .glassCard(cornerRadius: 26, padding: 18, tint: isDraft ? Theme.amber : Theme.pink)
         .animation(.snappy, value: meal)
     }
 
@@ -109,9 +110,9 @@ struct MealCard: View {
 
     func sourceColor(_ s: FoodSource) -> Color {
         switch s {
-        case .personal: return Theme.mint
-        case .taiwanFDA: return Theme.cyan
-        case .usdaSR, .usdaFoundation: return Theme.violet
+        case .personal: return Theme.pink
+        case .taiwanFDA: return Theme.blue
+        case .usdaSR, .usdaFoundation: return Theme.lilac
         case .openFoodFacts: return Theme.amber
         case .estimate: return Theme.coral
         }

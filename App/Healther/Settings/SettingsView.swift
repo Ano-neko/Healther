@@ -125,12 +125,17 @@ struct OnboardingView: View {
                         .foregroundStyle(Theme.secondaryText)
                 }
                 if step == 0 {
-                    TextField("给我起个名字", text: $name)
-                        .multilineTextAlignment(.center)
-                        .font(.system(size: 17, design: .rounded))
-                        .padding(14)
-                        .glassEffect(.regular, in: .capsule)
-                        .padding(.horizontal, 50)
+                    VStack(spacing: 8) {
+                        Text("想怎么叫我？")
+                            .font(.footnote)
+                            .foregroundStyle(Theme.tertiaryText)
+                        TextField("给我起个名字", text: $name)
+                            .multilineTextAlignment(.center)
+                            .font(.system(size: 17, design: .rounded))
+                            .padding(14)
+                            .glassEffect(.regular, in: .capsule)
+                    }
+                    .padding(.horizontal, 50)
                 } else {
                     SecureField("DeepSeek API Key（sk-…）", text: $key)
                         .textInputAutocapitalization(.never)
@@ -154,6 +159,7 @@ struct OnboardingView: View {
                 } label: {
                     Text(step == 0 ? "继续" : "开始")
                         .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Theme.background)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 6)
                 }

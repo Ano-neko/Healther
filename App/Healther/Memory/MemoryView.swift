@@ -72,7 +72,7 @@ struct MemoryView: View {
                     Text(sec.title).sectionLabel()
                     ForEach(entries, id: \.key) { e in
                         HStack(alignment: .top) {
-                            Text(e.key).font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.mint).frame(width: 72, alignment: .leading)
+                            Text(e.key).font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.pink).frame(width: 72, alignment: .leading)
                             Text(e.value).font(.system(size: 14))
                             Spacer()
                         }
@@ -130,8 +130,8 @@ struct MemoryView: View {
         ForEach(diary, id: \.day) { e in
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    Text(e.day).font(.metric(13, weight: .bold)).foregroundStyle(Theme.violet)
-                    if let mood = e.mood { Chip(text: mood, color: Theme.violet) }
+                    Text(e.day).font(.metric(13, weight: .bold)).foregroundStyle(Theme.lilac)
+                    if let mood = e.mood { Chip(text: mood, color: Theme.lilac) }
                     Spacer()
                 }
                 Text(e.summary).font(.system(size: 14)).lineSpacing(3)
@@ -143,7 +143,7 @@ struct MemoryView: View {
                     }
                 }
             }
-            .glassCard(tint: Theme.violet)
+            .glassCard(tint: Theme.lilac)
         }
     }
 
@@ -162,7 +162,7 @@ struct MemoryView: View {
                         .font(.metric(12, weight: .regular)).foregroundStyle(Theme.secondaryText)
                 }
                 Spacer()
-                Text("×\(f.useCount ?? 0)").font(.metric(13)).foregroundStyle(Theme.mint)
+                Text("×\(f.useCount ?? 0)").font(.metric(13)).foregroundStyle(Theme.pink)
             }
             .glassCard(cornerRadius: 18, padding: 14)
             .contextMenu {
@@ -188,11 +188,11 @@ struct MemoryView: View {
 
     func color(_ k: MemoryStore.Kind) -> Color {
         switch k {
-        case .fact: return Theme.cyan
-        case .preference: return Theme.mint
+        case .fact: return Theme.blue
+        case .preference: return Theme.pink
         case .health: return Theme.rose
         case .event: return Theme.amber
-        case .emotion: return Theme.violet
+        case .emotion: return Theme.lilac
         case .insight: return Theme.protein
         case .commitment: return Theme.coral
         }

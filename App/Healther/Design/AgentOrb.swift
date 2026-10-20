@@ -6,10 +6,10 @@ enum OrbState: Equatable {
 
     var palette: [Color] {
         switch self {
-        case .idle: return [Theme.mint, Theme.cyan, Theme.violet, Theme.indigo]
-        case .thinking: return [Theme.violet, Theme.indigo, Theme.cyan, Theme.rose]
-        case .speaking: return [Theme.mint, Theme.cyan, Theme.mint, Theme.violet]
-        case .working: return [Theme.amber, Theme.coral, Theme.violet, Theme.cyan]
+        case .idle: return [Theme.pink, Theme.blue, Theme.lilac, Theme.deepBlue]
+        case .thinking: return [Theme.lilac, Theme.deepBlue, Theme.blue, Theme.rose]
+        case .speaking: return [Theme.pink, Theme.blue, Theme.pink, Theme.lilac]
+        case .working: return [Theme.amber, Theme.coral, Theme.lilac, Theme.blue]
         case .offline: return [Color.gray, Color.gray.opacity(0.6), Color.gray.opacity(0.4), Color.gray.opacity(0.3)]
         }
     }
