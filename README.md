@@ -5,7 +5,7 @@
 
 Healther 把 Apple Watch / Apple 健康的数据（睡眠、活动、心率、HRV、体重……）、饮食记录、情绪和你们的聊天记忆交给一个 Agent 来统合：它会解读、规划，也可以只是陪你闲聊——而且聊多久都不会忘记自己是来照顾你身心健康的。
 
-**状态：v0.1 开发中。** 核心 Agent 已可在 Linux / macOS 终端运行；iOS App 界面正在搭建。
+**状态：v0.1 开发中。** 核心 Agent 已可在 Linux / macOS 终端运行；iOS App 见 [docs/IOS.md](docs/IOS.md)。
 
 ## 特点
 

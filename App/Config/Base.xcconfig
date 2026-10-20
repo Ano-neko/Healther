@@ -1,0 +1,5 @@
+// Shared build settings. Personal values come from Local.xcconfig (git-ignored).
+HEALTHER_BUNDLE_ID = io.github.healther.app
+HEALTHER_TEAM_ID =
+
+#include? "Local.xcconfig"

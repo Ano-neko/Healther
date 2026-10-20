@@ -1,0 +1,4 @@
+// Copy to Local.xcconfig (git-ignored) and fill in your own values.
+// Team ID: Xcode → Settings → Accounts → your Apple ID → Team (a free Personal Team works).
+HEALTHER_BUNDLE_ID = com.yourname.healther
+HEALTHER_TEAM_ID = ABCDE12345
