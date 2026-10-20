@@ -40,6 +40,7 @@ public final class HealtherServices: Sendable {
     public let foodSearch: FoodSearchService
     public let barcode: OpenFoodFactsSource
     public let kv: KeyValueStore
+    public let body: BodyStore
 
     public var dayNotes: DayNoteStore { DayNoteStore(kv: kv) }
     public var persona: PersonaStore { PersonaStore(kv: kv) }
@@ -64,6 +65,7 @@ public final class HealtherServices: Sendable {
         barcode = OpenFoodFactsSource()
         foodSearch = FoodSearchService(personal: personalFoods, offline: foodTables, online: enableOnlineFood ? [barcode] : [])
         kv = KeyValueStore(db: db)
+        body = BodyStore(db: db, kv: kv)
     }
 
     /// Standard on-disk setup: `<dataDirectory>/healther.sqlite` plus the bundled food table.

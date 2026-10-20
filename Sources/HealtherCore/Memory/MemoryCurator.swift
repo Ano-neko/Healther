@@ -134,7 +134,7 @@ struct MemoryCurator {
         let meals = try s.meals.meals(from: start, to: end)
         let moods = try s.wellbeing.moods(from: start, to: end)
         guard !msgs.isEmpty || !meals.isEmpty || !moods.isEmpty else { return false }
-        let health = try? await s.health.dailySummary(for: day)
+        let health = try? await s.healthSummary(for: day)
         let nutrition = try s.meals.totals(from: start, to: end)
 
         let prompt = """

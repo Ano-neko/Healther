@@ -6,7 +6,7 @@ enum HealthTools {
 
 struct HealthOverviewTool: AgentTool {
     let name = "get_health_overview"
-    let description = "查询某一天的完整状况：Apple Watch 数据（睡眠、步数、活动、心率、HRV、体重、运动记录）、饮食合计与各餐、饮水、情绪记录、目标。默认今天。"
+    let description = "查询某一天的完整状况：Apple 健康里能读到的全部数据（睡眠、步数、活动/静息能量、心率、静息心率、HRV、血氧、呼吸、腕温、血压、血糖、体重身高、步行指标、日照、噪音、心率提醒、经期、运动记录等，有数据的才会出现）、饮食合计与各餐、饮水、情绪记录、目标。默认今天。"
     let parameters = Schema.object([
         "date": Schema.string("YYYY-MM-DD，默认今天。睡眠指的是这天早上醒来的那一觉。"),
     ])
@@ -15,7 +15,7 @@ struct HealthOverviewTool: AgentTool {
         let s = ctx.services
         let day = ctx.clock.parse(args["date"]?.stringValue, relativeTo: ctx.now) ?? ctx.now
         let start = ctx.clock.startOfDay(day), end = ctx.clock.endOfDay(day)
-        let health = try await s.health.dailySummary(for: day)
+        let health = try await s.healthSummary(for: day)
         let meals = try s.meals.meals(from: start, to: end)
         var o: [String: JSONValue] = [
             "date": .string(ctx.clock.dayKey(day)),
@@ -39,7 +39,8 @@ struct HealthTrendTool: AgentTool {
     let name = "query_health_trend"
     let description = "查询某项指标最近 N 天的每日数值和统计（平均/最小/最大），用来看趋势、做对比。"
     let parameters = Schema.object([
-        "metric": Schema.string("指标", enum: HealthMetric.allCases.map(\.rawValue)),
+        "metric": Schema.string(HealthMetric.allCases.map { "\($0.rawValue)=\($0.displayName)" }.joined(separator: "，"),
+                                enum: HealthMetric.allCases.map(\.rawValue)),
         "days": Schema.integer("天数（含今天），1–90，默认 14", minimum: 1, maximum: 90),
         "end_date": Schema.string("截止日期 YYYY-MM-DD，默认今天"),
     ], required: ["metric"])
@@ -64,10 +65,10 @@ struct HealthTrendTool: AgentTool {
                 return DailyValue(day: d, value: w > 0 ? w : nil)
             }
         default:
-            values = try await s.health.dailyValues(metric, days: days, endingAt: end)
+            values = try await s.dailyValues(metric, days: days, endingAt: end)
         }
         let present = values.compactMap(\.value)
-        let places = [.bodyMass, .bodyFat, .sleepHours, .vo2Max, .respiratoryRate].contains(metric) ? 1 : 0
+        let places = metric.places
         var stats: [String: JSONValue] = ["days_with_data": .number(Double(present.count))]
         if !present.isEmpty {
             stats["avg"] = .rounded(present.reduce(0, +) / Double(present.count), places)

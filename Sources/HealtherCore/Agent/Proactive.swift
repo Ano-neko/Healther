@@ -38,6 +38,20 @@ public struct ProactiveSettings: Codable, Sendable, Equatable {
 
     public init() {}
 
+    /// Missing keys keep their defaults, so settings saved by older versions still load.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let d = ProactiveSettings()
+        wake = try c.decodeIfPresent(Bool.self, forKey: .wake) ?? d.wake
+        meals = try c.decodeIfPresent(Bool.self, forKey: .meals) ?? d.meals
+        random = try c.decodeIfPresent(Bool.self, forKey: .random) ?? d.random
+        breakfast = try c.decodeIfPresent(String.self, forKey: .breakfast) ?? d.breakfast
+        lunch = try c.decodeIfPresent(String.self, forKey: .lunch) ?? d.lunch
+        dinner = try c.decodeIfPresent(String.self, forKey: .dinner) ?? d.dinner
+        randomFrom = try c.decodeIfPresent(String.self, forKey: .randomFrom) ?? d.randomFrom
+        randomTo = try c.decodeIfPresent(String.self, forKey: .randomTo) ?? d.randomTo
+    }
+
     public var anyEnabled: Bool { wake || meals || random }
 }
 

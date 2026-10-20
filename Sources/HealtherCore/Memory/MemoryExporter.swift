@@ -20,6 +20,17 @@ public enum MemoryExporter {
             }
         }
 
+        let b = s.body.current
+        var bodyLines: [String] = []
+        if let h = b.heightCm { bodyLines.append("- **身高**：\(fmt(h))cm") }
+        if let y = b.birthYear { bodyLines.append("- **出生年份**：\(y)") }
+        if let sex = b.sex.flatMap(BodyProfile.Sex.init(rawValue:)) { bodyLines.append("- **性别**：\(sex.title)") }
+        let weights = try s.body.weights(from: .distantPast, to: now)
+        if !weights.isEmpty {
+            bodyLines.append("- **手动记录的体重**：" + weights.suffix(30).map { "\(clock.dayKey($0.at)) \(fmt($0.kg, 1))kg" }.joined(separator: "，"))
+        }
+        if !bodyLines.isEmpty { out.append("## 身体资料\n" + bodyLines.joined(separator: "\n")) }
+
         let goals = try s.wellbeing.goals()
         if !goals.isEmpty {
             out.append("## 目标\n" + goals.map { g in

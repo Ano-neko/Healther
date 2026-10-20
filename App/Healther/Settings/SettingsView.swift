@@ -12,6 +12,11 @@ struct SettingsView: View {
     /// Tapping the version seven times reveals the persona editor (kept out of sight on purpose).
     @State private var versionTaps = 0
     @State private var personaUnlocked = false
+    @State private var bodyInfo = BodyProfile()
+    @State private var healthBody = BodyProfile()
+    @State private var weight: (kg: Double, at: Date)?
+    @State private var showWeightEntry = false
+    @State private var weightText = ""
 
     var body: some View {
         NavigationStack {
@@ -23,6 +28,8 @@ struct SettingsView: View {
                             .font(.system(size: 18, weight: .semibold, design: .rounded))
                     }
                 } header: { Text("你的伙伴") }
+
+                bodySection
 
                 Section {
                     SecureField(model.hasAPIKey ? "已保存（输入以替换）" : "sk-…", text: $apiKey)
@@ -135,6 +142,21 @@ struct SettingsView: View {
                 draft = model.settings
                 proactive = model.proactiveSettings
                 versionTaps = 0
+                bodyInfo = model.bodyProfile
+            }
+            .task { await loadBody() }
+            .alert("记录体重", isPresented: $showWeightEntry) {
+                TextField("kg", text: $weightText).keyboardType(.decimalPad)
+                Button("记录") {
+                    guard let kg = Double(weightText.replacingOccurrences(of: ",", with: ".")), (20...300).contains(kg) else { return }
+                    Task {
+                        await model.logWeight(kg)
+                        await loadBody()
+                    }
+                }
+                Button("取消", role: .cancel) {}
+            } message: {
+                Text("现在的体重，单位 kg")
             }
             .sensoryFeedback(.impact(weight: .light), trigger: personaUnlocked)
             .sensoryFeedback(.success, trigger: saved)
@@ -145,6 +167,60 @@ struct SettingsView: View {
                 Button("全部删除", role: .destructive) { model.deleteAllData() }
             }
         }
+    }
+
+    // MARK: Body
+
+    var bodySection: some View {
+        Section {
+            LabeledContent("身高") {
+                HStack(spacing: 4) {
+                    TextField(healthBody.heightCm.map { "\(Int($0.rounded()))" } ?? "未填", value: $bodyInfo.heightCm,
+                              format: .number.precision(.fractionLength(0...1)))
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                    Text("cm").foregroundStyle(.secondary)
+                }
+            }
+            Picker("出生年份", selection: $bodyInfo.birthYear) {
+                Text(healthBody.birthYear.map { "\(String($0))（健康）" } ?? "未填").tag(Int?.none)
+                ForEach(birthYears, id: \.self) { y in Text(verbatim: "\(y)").tag(Int?.some(y)) }
+            }
+            Picker("性别", selection: $bodyInfo.sex) {
+                Text(healthBody.sex.flatMap(BodyProfile.Sex.init(rawValue:)).map { "\($0.title)（健康）" } ?? "不说").tag(String?.none)
+                ForEach(BodyProfile.Sex.allCases, id: \.self) { sex in Text(sex.title).tag(String?.some(sex.rawValue)) }
+            }
+            LabeledContent("体重") {
+                if let weight {
+                    Text("\(weight.kg, format: .number.precision(.fractionLength(1))) kg · \(weight.at, format: .dateTime.month().day())")
+                } else {
+                    Text("最近 30 天没有")
+                }
+            }
+            Button {
+                weightText = ""
+                showWeightEntry = true
+            } label: {
+                Label("记一笔体重", systemImage: "scalemass")
+            }
+        } header: {
+            Text("我的身体")
+        } footer: {
+            Text("Apple 健康里有的会自动带过来，这里填的优先。没有体重秤也可以手动记，会一并写进 Apple 健康。")
+        }
+        .onChange(of: bodyInfo) { _, new in model.saveBody(new) }
+    }
+
+    var birthYears: [Int] {
+        let year = Calendar.current.component(.year, from: Date())
+        return Array((year - 100)...(year - 5)).reversed()
+    }
+
+    func loadBody() async {
+        await model.services?.syncBodyFromHealth()
+        healthBody = model.bodyFromHealth
+        bodyInfo = model.bodyProfile
+        weight = await model.latestWeight()
     }
 
     /// "HH:mm" strings edited as a time picker.

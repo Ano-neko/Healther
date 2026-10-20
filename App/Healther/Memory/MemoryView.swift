@@ -11,6 +11,7 @@ struct MemoryView: View {
     @State private var foods: [FoodCandidate] = []
     @State private var query = ""
     @State private var exportFile: ExportFile?
+    @State private var bodyInfo = BodyProfile()
 
     var body: some View {
         NavigationStack {
@@ -62,6 +63,7 @@ struct MemoryView: View {
     func load() {
         guard let s = model.services else { return }
         profile = (try? s.profile.all()) ?? []
+        bodyInfo = s.body.current
         if query.trimmingCharacters(in: .whitespaces).isEmpty {
             memories = (try? s.memories.active(limit: 300)) ?? []
         } else {
@@ -75,8 +77,22 @@ struct MemoryView: View {
 
     @ViewBuilder
     var profileList: some View {
-        if profile.isEmpty {
+        if profile.isEmpty && bodyInfo.isEmpty {
             empty("还不太了解你", "多聊聊，\(model.assistantName)会慢慢记住你是谁。")
+        }
+        if !bodyInfo.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("身体资料").sectionLabel()
+                ForEach(bodyRows, id: \.0) { row in
+                    HStack(alignment: .top) {
+                        Text(row.0).font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.blue).frame(width: 72, alignment: .leading)
+                        Text(row.1).font(.system(size: 14))
+                        Spacer()
+                    }
+                }
+                Text("在「设置 → 我的身体」里修改").font(.system(size: 12)).foregroundStyle(.tertiary)
+            }
+            .glassCard()
         }
         ForEach(ProfileStore.Section.allCases, id: \.self) { sec in
             let entries = profile.filter { $0.section == sec }
@@ -100,6 +116,14 @@ struct MemoryView: View {
                 .glassCard()
             }
         }
+    }
+
+    var bodyRows: [(String, String)] {
+        var rows: [(String, String)] = []
+        if let h = bodyInfo.heightCm { rows.append(("身高", "\(Int(h.rounded())) cm")) }
+        if let y = bodyInfo.birthYear, let age = bodyInfo.age(now: Date(), calendar: .current) { rows.append(("年龄", "\(age) 岁（\(String(y))）")) }
+        if let sex = bodyInfo.sex.flatMap(BodyProfile.Sex.init(rawValue:)) { rows.append(("性别", sex.title)) }
+        return rows
     }
 
     // MARK: Memories

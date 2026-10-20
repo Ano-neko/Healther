@@ -1,7 +1,7 @@
 import Foundation
 
 enum WellbeingTools {
-    static let all: [any AgentTool] = [LogBodyTool(), LogWaterTool(), LogMoodTool(), SetGoalTool(), SetTodayCardTool()]
+    static let all: [any AgentTool] = [LogBodyTool(), UpdateBodyProfileTool(), LogWaterTool(), LogMoodTool(), SetGoalTool(), SetTodayCardTool()]
 }
 
 struct SetTodayCardTool: AgentTool {
@@ -55,8 +55,46 @@ struct LogBodyTool: AgentTool {
         default:
             return .error("未知 kind")
         }
-        try await ctx.services.health.save(m, at: at)
+        if case .weight(let kg) = m {
+            // Kept locally too, so it counts even when Apple Health won't take it.
+            try ctx.services.body.addWeight(kg: kg, at: at)
+            try? await ctx.services.health.save(m, at: at)
+        } else {
+            try await ctx.services.health.save(m, at: at)
+        }
         return ToolResult(["ok": true, "saved": .string(label)], summary: "记录了\(label)")
+    }
+}
+
+struct UpdateBodyProfileTool: AgentTool {
+    let name = "update_body_profile"
+    let description = "更新 TA 的身体资料：身高、出生年份、性别（App 设置里「我的身体」也显示和修改这些）。只传要改的字段；TA 说了才记，不要猜。"
+    let parameters = Schema.object([
+        "height_cm": Schema.number("身高 cm"),
+        "birth_year": Schema.integer("出生年份，如 1998；TA 只说了年龄就用今年减去年龄", minimum: 1900, maximum: 2030),
+        "sex": Schema.string("性别", enum: BodyProfile.Sex.allCases.map(\.rawValue)),
+    ])
+
+    func run(_ args: JSONValue, _ ctx: ToolContext) async throws -> ToolResult {
+        var p = ctx.services.body.manual
+        var changed: [String] = []
+        if let h = args["height_cm"]?.doubleValue {
+            guard (80...250).contains(h) else { return .error("身高数值不合理") }
+            p.heightCm = h; changed.append("身高 \(fmt(h))cm")
+        }
+        if let y = args["birth_year"]?.intValue {
+            let year = ctx.clock.calendar.component(.year, from: ctx.now)
+            guard (year - 120...year - 3).contains(y) else { return .error("出生年份不合理") }
+            p.birthYear = y; changed.append("出生 \(y) 年")
+        }
+        if let raw = args["sex"]?.stringValue {
+            guard let sex = BodyProfile.Sex(rawValue: raw) else { return .error("未知性别值") }
+            p.sex = sex.rawValue; changed.append("性别 \(sex.title)")
+        }
+        guard !changed.isEmpty else { return .error("没有要更新的字段") }
+        try ctx.services.body.setManual(p)
+        let label = changed.joined(separator: "，")
+        return ToolResult(["ok": true], summary: "身体资料：\(label)", events: [.memoryChanged("身体资料：\(label)")])
     }
 }
 

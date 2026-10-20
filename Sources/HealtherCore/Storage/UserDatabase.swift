@@ -2,8 +2,11 @@ import Foundation
 
 /// The user's personal database: memory, conversation, meals, journal.
 /// Everything here stays on device.
+///
+/// Upgrades must keep existing data: append a new `if v < N` step with additive SQL,
+/// never edit an earlier step.
 public enum UserDatabase {
-    public static let currentVersion = 1
+    public static let currentVersion = 2
 
     public static func open(at url: URL) throws -> SQLiteDatabase {
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -26,7 +29,23 @@ public enum UserDatabase {
                 try db.setUserVersion(1)
             }
         }
+        if v < 2 {
+            try db.transaction {
+                try db.executeScript(schemaV2)
+                try db.setUserVersion(2)
+            }
+        }
     }
+
+    /// v2: hand-logged weights (no smart scale needed).
+    static let schemaV2 = """
+    CREATE TABLE weight_entries(
+        id INTEGER PRIMARY KEY,
+        at REAL NOT NULL,
+        kg REAL NOT NULL
+    );
+    CREATE INDEX weight_entries_at ON weight_entries(at);
+    """
 
     // Times are REAL unix seconds. JSON blobs are TEXT.
     static let schemaV1 = """

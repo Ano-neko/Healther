@@ -13,6 +13,21 @@ public protocol HealthDataSource: Sendable {
     func deleteMeal(id: UUID) async throws
     func saveWater(ml: Double, at date: Date) async throws
     func save(mood: MoodEntry) async throws
+    /// What Apple Health knows about the body itself (birth date, sex, latest height).
+    func characteristics() async -> HealthCharacteristics
+}
+
+public struct HealthCharacteristics: Codable, Sendable, Equatable {
+    public var birthYear: Int?
+    /// "female" / "male" (BodyProfile.Sex raw values); nil when unknown.
+    public var sex: String?
+    public var heightCm: Double?
+
+    public init(birthYear: Int? = nil, sex: String? = nil, heightCm: Double? = nil) {
+        self.birthYear = birthYear
+        self.sex = sex
+        self.heightCm = heightCm
+    }
 }
 
 public enum HealthDataError: Error, CustomStringConvertible {

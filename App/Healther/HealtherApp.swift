@@ -16,6 +16,7 @@ struct HealtherApp: App {
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .active {
                         Task {
+                            await model.requestNewHealthTypesIfNeeded()
                             await model.refreshToday()
                             await model.proactiveTick(inBackground: false)
                         }

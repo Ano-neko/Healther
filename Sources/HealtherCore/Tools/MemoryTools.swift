@@ -60,8 +60,8 @@ struct UpdateProfileTool: AgentTool {
     let parameters = Schema.object([
         "section": Schema.string(ProfileStore.Section.allCases.map { "\($0.rawValue)=\($0.title)（\($0.hint)）" }.joined(separator: "；"),
                                  enum: ProfileStore.Section.allCases.map(\.rawValue)),
-        "key": Schema.string("条目名，如“称呼”“身高”“过敏”“减脂目标”"),
-        "value": Schema.nullable(Schema.string("简短的值，如“175cm”“对花生过敏”")),
+        "key": Schema.string("条目名，如“称呼”“过敏”“减脂目标”"),
+        "value": Schema.nullable(Schema.string("简短的值，如“小林”“对花生过敏”")),
     ], required: ["section", "key", "value"])
 
     func run(_ args: JSONValue, _ ctx: ToolContext) async throws -> ToolResult {

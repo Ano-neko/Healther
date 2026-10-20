@@ -31,33 +31,86 @@ public final class HealthKitDataSource: HealthDataSource, @unchecked Sendable {
         case .bodyFat: return HKQuantityType(.bodyFatPercentage)
         case .dietaryEnergy: return HKQuantityType(.dietaryEnergyConsumed)
         case .water: return HKQuantityType(.dietaryWater)
+        case .basalEnergy: return HKQuantityType(.basalEnergyBurned)
+        case .heartRate: return HKQuantityType(.heartRate)
+        case .walkingHeartRate: return HKQuantityType(.walkingHeartRateAverage)
+        case .heartRateRecovery: return HKQuantityType(.heartRateRecoveryOneMinute)
+        case .bloodOxygen: return HKQuantityType(.oxygenSaturation)
+        case .wristTemperature: return HKQuantityType(.appleSleepingWristTemperature)
+        case .breathingDisturbances: return HKQuantityType(.appleSleepingBreathingDisturbances)
+        case .standMinutes: return HKQuantityType(.appleStandTime)
+        case .distanceWalkingRunning: return HKQuantityType(.distanceWalkingRunning)
+        case .distanceCycling: return HKQuantityType(.distanceCycling)
+        case .distanceSwimming: return HKQuantityType(.distanceSwimming)
+        case .flightsClimbed: return HKQuantityType(.flightsClimbed)
+        case .daylightMinutes: return HKQuantityType(.timeInDaylight)
+        case .walkingSpeed: return HKQuantityType(.walkingSpeed)
+        case .walkingStepLength: return HKQuantityType(.walkingStepLength)
+        case .walkingAsymmetry: return HKQuantityType(.walkingAsymmetryPercentage)
+        case .walkingSteadiness: return HKQuantityType(.appleWalkingSteadiness)
+        case .height: return HKQuantityType(.height)
+        case .bmi: return HKQuantityType(.bodyMassIndex)
+        case .leanBodyMass: return HKQuantityType(.leanBodyMass)
+        case .waist: return HKQuantityType(.waistCircumference)
+        case .bloodPressureSystolic: return HKQuantityType(.bloodPressureSystolic)
+        case .bloodPressureDiastolic: return HKQuantityType(.bloodPressureDiastolic)
+        case .bloodGlucose: return HKQuantityType(.bloodGlucose)
+        case .environmentalNoise: return HKQuantityType(.environmentalAudioExposure)
+        case .headphoneAudio: return HKQuantityType(.headphoneAudioExposure)
+        case .caffeine: return HKQuantityType(.dietaryCaffeine)
+        case .afibBurden: return HKQuantityType(.atrialFibrillationBurden)
         case .standHours, .sleepHours, .mindfulMinutes: return nil
         }
     }
 
     static func unit(_ m: HealthMetric) -> HKUnit {
+        let bpm = HKUnit.count().unitDivided(by: .minute())
         switch m {
-        case .steps: return .count()
-        case .activeEnergy, .dietaryEnergy: return .kilocalorie()
-        case .exerciseMinutes, .mindfulMinutes: return .minute()
-        case .restingHeartRate, .respiratoryRate: return .count().unitDivided(by: .minute())
+        case .steps, .flightsClimbed, .bmi: return .count()
+        case .activeEnergy, .dietaryEnergy, .basalEnergy: return .kilocalorie()
+        case .exerciseMinutes, .mindfulMinutes, .standMinutes, .daylightMinutes: return .minute()
+        case .restingHeartRate, .respiratoryRate, .heartRate, .walkingHeartRate, .heartRateRecovery: return bpm
         case .heartRateVariability: return .secondUnit(with: .milli)
         case .vo2Max: return HKUnit(from: "ml/kg*min")
-        case .bodyMass: return .gramUnit(with: .kilo)
-        case .bodyFat: return .percent()
+        case .bodyMass, .leanBodyMass: return .gramUnit(with: .kilo)
+        case .bodyFat, .bloodOxygen, .walkingAsymmetry, .walkingSteadiness, .afibBurden: return .percent()
         case .water: return .literUnit(with: .milli)
         case .standHours, .sleepHours: return .hour()
+        case .wristTemperature: return .degreeCelsius()
+        case .breathingDisturbances: return .count()
+        case .distanceWalkingRunning, .distanceCycling: return .meterUnit(with: .kilo)
+        case .distanceSwimming: return .meter()
+        case .walkingSpeed: return HKUnit(from: "km/hr")
+        case .walkingStepLength, .height, .waist: return .meterUnit(with: .centi)
+        case .bloodPressureSystolic, .bloodPressureDiastolic: return .millimeterOfMercury()
+        case .bloodGlucose: return HKUnit.moleUnit(with: .milli, molarMass: HKUnitMolarMassBloodGlucose).unitDivided(by: .liter())
+        case .environmentalNoise, .headphoneAudio: return .decibelAWeightedSoundPressureLevel()
+        case .caffeine: return .gramUnit(with: .milli)
         }
     }
+
+    /// HealthKit stores percentages as 0–1.
+    static func scale(_ m: HealthMetric) -> Double {
+        unit(m) == .percent() ? 100 : 1
+    }
+
+    /// One-off records worth mentioning, with how to describe them.
+    static let eventTypes: [(HKCategoryTypeIdentifier, String)] = [
+        (.highHeartRateEvent, "高心率提醒"), (.lowHeartRateEvent, "低心率提醒"),
+        (.irregularHeartRhythmEvent, "心律不齐提醒"), (.sleepApneaEvent, "睡眠呼吸暂停提醒"),
+        (.lowCardioFitnessEvent, "心肺适能偏低提醒"), (.environmentalAudioExposureEvent, "环境噪音过大提醒"),
+        (.headphoneAudioExposureEvent, "耳机音量过大提醒"), (.menstrualFlow, "经期"),
+    ]
 
     static var readTypes: Set<HKObjectType> {
         var s: Set<HKObjectType> = [
             HKCategoryType(.sleepAnalysis), HKCategoryType(.appleStandHour), HKCategoryType(.mindfulSession),
-            HKObjectType.workoutType(), HKQuantityType(.bloodPressureSystolic), HKQuantityType(.bloodPressureDiastolic),
-            HKQuantityType(.dietaryProtein), HKQuantityType(.dietaryFatTotal), HKQuantityType(.dietaryCarbohydrates),
-            HKSampleType.stateOfMindType(),
+            HKObjectType.workoutType(), HKQuantityType(.dietaryProtein), HKQuantityType(.dietaryFatTotal),
+            HKQuantityType(.dietaryCarbohydrates), HKSampleType.stateOfMindType(),
+            HKCharacteristicType(.dateOfBirth), HKCharacteristicType(.biologicalSex),
         ]
         for m in HealthMetric.allCases { if let t = quantityType(m) { s.insert(t) } }
+        for (id, _) in eventTypes { s.insert(HKCategoryType(id)) }
         return s
     }
 
@@ -112,7 +165,7 @@ public final class HealthKitDataSource: HealthDataSource, @unchecked Sendable {
         let unit = Self.unit(m)
         collection.enumerateStatistics(from: start, to: end) { stats, _ in
             let q = m.aggregation == .sum ? stats.sumQuantity() : stats.averageQuantity()
-            if let q { out[self.clock.startOfDay(stats.startDate)] = q.doubleValue(for: unit) }
+            if let q { out[self.clock.startOfDay(stats.startDate)] = q.doubleValue(for: unit) * Self.scale(m) }
         }
         return out
     }
@@ -123,9 +176,7 @@ public final class HealthKitDataSource: HealthDataSource, @unchecked Sendable {
         let d = HKSampleQueryDescriptor(predicates: [.quantitySample(type: type, predicate: pred)],
                                         sortDescriptors: [SortDescriptor(\.endDate, order: .reverse)], limit: 1)
         guard let s = try await d.result(for: store).first else { return nil }
-        var v = s.quantity.doubleValue(for: Self.unit(m))
-        if m == .bodyFat { v *= 100 }
-        return (v, s.endDate)
+        return (s.quantity.doubleValue(for: Self.unit(m)) * Self.scale(m), s.endDate)
     }
 
     func sleep(endingOn day: Date) async throws -> SleepSummary? {
@@ -200,13 +251,68 @@ public final class HealthKitDataSource: HealthDataSource, @unchecked Sendable {
         s.standHours = try await standHours(start, end)
         s.mindfulMinutes = try await mindfulMinutes(start, end)
         s.sleep = try await sleep(endingOn: day)
-        if let (w, at) = try await latest(.bodyMass, before: end) {
+        if let (w, at) = try await latest(.bodyMass, before: end, within: 30) {
             s.bodyMass = w
             s.bodyMassDate = at
         }
-        s.bodyFat = try await latest(.bodyFat, before: end)?.0
+        s.bodyFat = try await latest(.bodyFat, before: end, within: 30)?.0
         s.workouts = try await workouts(start, end)
+        s.extra = await extras(start, end)
+        s.events = await events(start, end)
         return s
+    }
+
+    /// Every other metric that has data, queried in parallel. Missing permission just means no data.
+    func extras(_ start: Date, _ end: Date) async -> [HealthMetric: Double] {
+        await withTaskGroup(of: (HealthMetric, Double?).self) { group in
+            for m in HealthMetric.extras {
+                group.addTask {
+                    if m.aggregation == .latest { return (m, try? await self.latest(m, before: end, within: 90)?.0) }
+                    return (m, (try? await self.statistics(m, from: start, to: end))?[start])
+                }
+            }
+            var out: [HealthMetric: Double] = [:]
+            for await (m, v) in group { if let v, v.isFinite, v > 0 || m == .wristTemperature { out[m] = v } }
+            return out
+        }
+    }
+
+    func events(_ start: Date, _ end: Date) async -> [String] {
+        var out: [(Date, String)] = []
+        let pred = HKQuery.predicateForSamples(withStart: start, end: end)
+        for (id, title) in Self.eventTypes {
+            let d = HKSampleQueryDescriptor(predicates: [.categorySample(type: HKCategoryType(id), predicate: pred)],
+                                            sortDescriptors: [SortDescriptor(\.startDate)])
+            guard let samples = try? await d.result(for: store) else { continue }
+            if id == .menstrualFlow {
+                if let flow = samples.last { out.append((flow.startDate, "经期记录（\(Self.flowName(flow.value))）")) }
+            } else {
+                out += samples.map { ($0.startDate, "\(clock.timeString($0.startDate)) \(title)") }
+            }
+        }
+        return out.sorted { $0.0 < $1.0 }.map(\.1)
+    }
+
+    static func flowName(_ v: Int) -> String {
+        switch HKCategoryValueVaginalBleeding(rawValue: v) {
+        case .light: return "量少"
+        case .medium: return "量中"
+        case .heavy: return "量多"
+        case .none?: return "无"
+        default: return "未注明量"
+        }
+    }
+
+    public func characteristics() async -> HealthCharacteristics {
+        var c = HealthCharacteristics()
+        c.birthYear = (try? store.dateOfBirthComponents())?.year
+        switch (try? store.biologicalSex())?.biologicalSex {
+        case .female: c.sex = BodyProfile.Sex.female.rawValue
+        case .male: c.sex = BodyProfile.Sex.male.rawValue
+        default: break
+        }
+        c.heightCm = try? await latest(.height, before: Date(), within: 3650)?.0
+        return c
     }
 
     public func dailyValues(_ metric: HealthMetric, days: Int, endingAt end: Date) async throws -> [DailyValue] {
@@ -226,9 +332,6 @@ public final class HealthKitDataSource: HealthDataSource, @unchecked Sendable {
             var out: [DailyValue] = []
             for d in dayList { out.append(DailyValue(day: d, value: try await mindfulMinutes(d, clock.endOfDay(d)))) }
             return out
-        case .bodyMass, .bodyFat, .vo2Max:
-            let stats = try await statistics(metric, from: first, to: clock.endOfDay(last))
-            return dayList.map { DailyValue(day: $0, value: stats[$0].map { metric == .bodyFat ? $0 * 100 : $0 }) }
         default:
             let stats = try await statistics(metric, from: first, to: clock.endOfDay(last))
             return dayList.map { DailyValue(day: $0, value: stats[$0]) }

@@ -29,7 +29,7 @@ public final class ProfileStore: Sendable {
 
         public var hint: String {
             switch self {
-            case .basics: return "称呼、性别、出生年份、身高、所在城市、职业"
+            case .basics: return "称呼、所在城市、职业（身高、出生年份、性别用 update_body_profile）"
             case .health: return "慢性病、过敏、用药、伤病、体检异常"
             case .goals: return "减脂/增肌/睡眠/情绪等长期目标与当前计划"
             case .diet: return "口味、忌口、常吃的店、饮食模式"

@@ -65,7 +65,15 @@ public final class MockHealthDataSource: HealthDataSource {
         case .bodyFat: return 19.5 + (noise(day, 20) - 0.5) * 1.2
         case .sleepHours: return sleep(endingOn: day).asleepHours
         case .mindfulMinutes: return noise(day, 21) > 0.75 ? 10 : 0
+        case .basalEnergy: return (1520 + noise(day, 22) * 90) * max(todayFraction, 0.3)
+        case .heartRate: return 72 + noise(day, 23) * 10
+        case .walkingHeartRate: return 96 + noise(day, 24) * 12
+        case .bloodOxygen: return 96 + noise(day, 25) * 3
+        case .distanceWalkingRunning: return synthetic(.steps, day).map { $0 * 0.00072 }
+        case .flightsClimbed: return ((2 + noise(day, 26) * 10) * todayFraction).rounded()
+        case .daylightMinutes: return ((15 + noise(day, 27) * 80) * todayFraction).rounded()
         case .dietaryEnergy, .water: return nil
+        default: return nil  // not simulated
         }
     }
 
@@ -123,6 +131,9 @@ public final class MockHealthDataSource: HealthDataSource {
                 break
             }
         }
+        for m in HealthMetric.extras {
+            if let v = try value(m, on: day) { s.extra[m] = v }
+        }
         if (s.exerciseMinutes ?? 0) > 25 {
             let kinds = ["跑步", "力量训练", "骑行", "快走", "游泳"]
             let kind = kinds[Int(noise(day, 40) * Double(kinds.count))]
@@ -151,6 +162,8 @@ public final class MockHealthDataSource: HealthDataSource {
         case .restingHeartRate(let bpm): try insert("resting_heart_rate_manual", date, bpm)
         }
     }
+
+    public func characteristics() async -> HealthCharacteristics { HealthCharacteristics() }
 
     public func save(meal: Meal) async throws {}  // meals table is already the mock's source of truth
     public func deleteMeal(id: UUID) async throws {}

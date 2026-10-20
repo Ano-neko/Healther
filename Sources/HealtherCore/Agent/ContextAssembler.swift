@@ -20,6 +20,7 @@ struct ContextAssembler {
     func stablePrefix(now: Date) throws -> String {
         var parts = [Persona.systemPrompt(name: s.config.assistantName, profile: s.persona.current)]
         parts.append("## 关于 TA（档案）\n" + (try s.profile.render()))
+        parts.append("## TA 的身体资料\n" + renderBody(now: now))
         let episodes = try s.episodes.recent(5, before: clock.dayKey(now))
         if !episodes.isEmpty {
             let lines = episodes.reversed().map { e -> String in
@@ -34,9 +35,27 @@ struct ContextAssembler {
         return parts.joined(separator: "\n\n")
     }
 
+    /// Height / age / sex: typed in by the user (settings or chat), else from Apple Health.
+    func renderBody(now: Date) -> String {
+        let b = s.body.current, manual = s.body.manual
+        var lines: [String] = []
+        func src(_ isManual: Bool) -> String { isManual ? "" : "（来自 Apple 健康）" }
+        if let h = b.heightCm { lines.append("- 身高 \(fmt(h))cm" + src(manual.heightCm != nil)) }
+        if let y = b.birthYear, let age = b.age(now: now, calendar: clock.calendar) {
+            lines.append("- 出生 \(y) 年（今年 \(age) 岁）" + src(manual.birthYear != nil))
+        }
+        if let sex = b.sex.flatMap(BodyProfile.Sex.init(rawValue:)) { lines.append("- 性别 \(sex.title)" + src(manual.sex != nil)) }
+        let missing = [b.heightCm == nil ? "身高" : nil, b.birthYear == nil ? "年龄" : nil].compactMap { $0 }
+        if !missing.isEmpty {
+            lines.append("- 还不知道\(missing.joined(separator: "、"))。合适时顺口问，TA 说了就用 update_body_profile 记（TA 也能在设置「我的身体」里填）")
+        }
+        return lines.joined(separator: "\n")
+    }
+
     // MARK: Live state
 
     func liveState(now: Date, userText: String) async -> String {
+        await s.syncBodyFromHealth()
         var lines: [String] = []
         let today = clock.startOfDay(now), tomorrow = clock.endOfDay(now)
         lines.append("- 现在：\(clock.stamp(now)) \(clock.weekdayName(now))（\(clock.utcOffsetString(now))）")
@@ -50,7 +69,7 @@ struct ContextAssembler {
             goals.first { $0.kind == k }.map { " / 目标 \(fmt($0.target))" } ?? ""
         }
 
-        if let h = try? await s.health.dailySummary(for: now) {
+        if let h = try? await s.healthSummary(for: now) {
             if let sl = h.sleep {
                 var t = "- 昨晚睡眠：\(clock.timeString(sl.start)) → \(clock.timeString(sl.end))，睡着 \(fmt(sl.asleepHours, 1))h"
                 if let d = sl.deepHours, let r = sl.remHours { t += "（深睡 \(fmt(d, 1))h，REM \(fmt(r, 1))h）" }
@@ -61,16 +80,20 @@ struct ContextAssembler {
             var act: [String] = []
             if let v = h.steps { act.append("步数 \(fmt(v))" + goal(.steps)) }
             if let v = h.activeEnergy { act.append("活动能量 \(fmt(v)) kcal") }
+            if let v = h.extra[.basalEnergy] { act.append("静息能量 \(fmt(v)) kcal") }
             if let v = h.exerciseMinutes { act.append("锻炼 \(fmt(v)) 分钟" + goal(.exerciseMinutes)) }
             if !h.workouts.isEmpty { act.append("运动：" + h.workouts.map { "\($0.type) \(fmt($0.minutes))分钟" }.joined(separator: "、")) }
             if !act.isEmpty { lines.append("- 今日活动：" + act.joined(separator: "，")) }
             var body: [String] = []
-            if let v = h.restingHeartRate { body.append("静息心率 \(fmt(v))") }
-            if let v = h.hrv { body.append("HRV \(fmt(v))ms") }
+            // The watch computes these later in the day; until then yesterday's is the useful number.
+            if let v = await recent(h.restingHeartRate, .restingHeartRate, now: now) { body.append("静息心率 \(v)") }
+            if let v = await recent(h.hrv, .heartRateVariability, now: now) { body.append("HRV \(v)ms") }
+            if let v = h.extra[.bloodOxygen] { body.append("血氧 \(fmt(v))%") }
             if let v = h.bodyMass {
                 body.append("体重 \(fmt(v, 1))kg" + (h.bodyMassDate.map { "（\(clock.dayKey($0).suffix(5))）" } ?? "") + goal(.weightKg))
             }
             if !body.isEmpty { lines.append("- 身体：" + body.joined(separator: "，")) }
+            if !h.events.isEmpty { lines.append("- 今日健康记录：" + h.events.joined(separator: "；")) }
         }
 
         if let n = try? s.meals.totals(from: today, to: tomorrow) {
@@ -102,6 +125,14 @@ struct ContextAssembler {
             lines.append(contentsOf: recalled.map { "  - [#\($0.id) \($0.kind.title) \(clock.dayKey($0.createdAt))] \($0.content)" })
         }
         return "## 此刻（你的背景感知，系统每轮更新。不要复述，用得上再提）\n" + lines.joined(separator: "\n")
+    }
+
+    /// Today's value, or the latest of the past two days marked with its date.
+    func recent(_ today: Double?, _ metric: HealthMetric, now: Date) async -> String? {
+        if let today { return fmt(today) }
+        let values = (try? await s.dailyValues(metric, days: 3, endingAt: now)) ?? []
+        guard let last = values.last(where: { $0.value != nil }), let v = last.value else { return nil }
+        return "\(fmt(v))（\(clock.dayKey(last.day).suffix(5))）"
     }
 
     /// Whether the profile already says what to call the user.

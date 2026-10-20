@@ -264,6 +264,40 @@ final class AppModel {
 
     func requestHealthAccess() async {
         try? await services?.health.requestAuthorization()
+        UserDefaults.standard.set(Self.healthTypesVersion, forKey: "healthTypesVersion")
+        await services?.syncBodyFromHealth()
+        await refreshToday()
+    }
+
+    /// Bump when a release reads more Health types; iOS then asks only about the new ones.
+    static let healthTypesVersion = 2
+
+    func requestNewHealthTypesIfNeeded() async {
+        guard settings.onboarded, UserDefaults.standard.integer(forKey: "healthTypesVersion") < Self.healthTypesVersion else { return }
+        await requestHealthAccess()
+    }
+
+    // MARK: Body
+
+    var bodyProfile: BodyProfile { services?.body.manual ?? BodyProfile() }
+    var bodyFromHealth: BodyProfile { services?.body.fromHealth ?? BodyProfile() }
+
+    func saveBody(_ p: BodyProfile) {
+        try? services?.body.setManual(p)
+    }
+
+    /// Latest weight in the past 30 days, from Apple Health or logged by hand.
+    func latestWeight() async -> (kg: Double, at: Date)? {
+        guard let s = services, let h = try? await s.healthSummary(for: Date()), let kg = h.bodyMass else { return nil }
+        return (kg, h.bodyMassDate ?? Date())
+    }
+
+    /// For people without a smart scale: kept locally, and written to Apple Health when allowed.
+    func logWeight(_ kg: Double) async {
+        guard let s = services else { return }
+        let now = Date()
+        try? s.body.addWeight(kg: kg, at: now)
+        try? await s.health.save(.weight(kg: kg), at: now)
         await refreshToday()
     }
 

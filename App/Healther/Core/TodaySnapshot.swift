@@ -36,13 +36,13 @@ struct TodaySnapshot: Equatable {
         snap.date = now
         snap.note = s.dayNotes.note(for: clock.dayKey(now))
         snap.isMock = s.health.isMock
-        snap.health = try? await s.health.dailySummary(for: now)
+        snap.health = try? await s.healthSummary(for: now)
         snap.nutrition = (try? s.meals.totals(from: start, to: end)) ?? .zero
         snap.meals = (try? s.meals.meals(from: start, to: end)) ?? []
         snap.waterML = (try? s.wellbeing.water(from: start, to: end)) ?? 0
         for g in (try? s.wellbeing.goals()) ?? [] { snap.goals[g.kind] = g.target }
         for metric in [HealthMetric.restingHeartRate, .heartRateVariability, .bodyMass, .sleepHours, .respiratoryRate] {
-            let values = (try? await s.health.dailyValues(metric, days: 7, endingAt: now)) ?? []
+            let values = (try? await s.dailyValues(metric, days: 7, endingAt: now)) ?? []
             snap.trends[metric] = values.compactMap { v in v.value.map { SparkPointValue(day: v.day, value: $0) } }
         }
         return snap

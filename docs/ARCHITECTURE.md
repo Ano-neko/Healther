@@ -49,8 +49,18 @@
 ## 数据存储
 
 - `healther.sqlite`（用户数据，WAL 模式）：表结构见 `UserDatabase.swift`，用 `PRAGMA user_version` 做迁移。
+- 身体资料：kv `body.profile`（手动填写）与 `body.health`（Apple 健康特征的缓存），手动优先；手动体重在 `weight_entries`，同时尽量写入 Apple 健康。
 - `foods.sqlite`（只读，随包分发）：由 `scripts/build_food_db.py` 生成。
 - Apple 健康：体重、体脂、血压、饮食（`HKCorrelation` food，带 `HealtherMealID` 元数据，便于更新和删除）、饮水、心理状态（`HKStateOfMind`）。
+
+### 升级兼容
+
+从 v0.1 起，每次更新都必须能直接读用户手机上已有的数据：
+
+- 数据库只追加迁移步骤（`if v < N`），不改已有步骤，只做加法（新表、新列、新索引）。
+- kv 里的 JSON：新字段要么是可选类型，要么用 `decodeIfPresent` 给默认值（参考 `ProactiveSettings`）；已存储的取值（`GoalKind`、`ProfileStore.Section`、记忆类型、`HealthMetric`、kv 键名）只加不改名。
+- 读取 Apple 健康的类型变多时，提高 `AppModel.healthTypesVersion`，iOS 只会就新增的类型再问一次。
+- 存储格式变化要配一个迁移或解码测试（见 `BodyTests`）。
 
 ## 模型
 
