@@ -96,8 +96,14 @@ struct ContextAssembler {
             if !h.events.isEmpty { lines.append("- 今日健康记录：" + h.events.joined(separator: "；")) }
         }
 
+        let plan = await s.energyPlan(now: now)
+        if let plan {
+            lines.append("- 热量目标：每天 \(fmt(plan.target)) kcal" + (plan.fixed != nil ? "（TA 定的固定值；自动算的话是：\(plan.explanation)）" : "（自动：\(plan.explanation)）"))
+        } else {
+            lines.append("- 热量目标：数据不够，暂用 2000 kcal（有手表数据、或知道身高体重后会自动算）")
+        }
         if let n = try? s.meals.totals(from: today, to: tomorrow) {
-            lines.append("- 今日饮食（已确认）：\(fmt(n.kcal)) kcal\(goal(.dailyKcal))；蛋白质 \(fmt(n.protein))g\(goal(.proteinG))，脂肪 \(fmt(n.fat))g，碳水 \(fmt(n.carbs))g")
+            lines.append("- 今日饮食（已确认）：\(fmt(n.kcal)) / \(fmt(plan?.target ?? 2000)) kcal；蛋白质 \(fmt(n.protein))g\(goal(.proteinG))，脂肪 \(fmt(n.fat))g，碳水 \(fmt(n.carbs))g")
         }
         if let meals = try? s.meals.meals(from: today, to: tomorrow), !meals.isEmpty {
             lines.append("  已记：" + meals.map { "\($0.type.displayName) \(clock.timeString($0.eatenAt)) \(fmt($0.totals.kcal))kcal" }.joined(separator: "；"))

@@ -15,6 +15,8 @@ public final class WellbeingStore: Sendable {
         case bedtime = "bedtime"
         case waterML = "water_ml"
         case weightKg = "weight_kg"
+        /// kg per week; negative = lose. Drives the automatic daily kcal target.
+        case weeklyWeightChange = "weekly_weight_change"
 
         public var title: String {
             switch self {
@@ -26,6 +28,7 @@ public final class WellbeingStore: Sendable {
             case .bedtime: return "入睡时间"
             case .waterML: return "每日饮水"
             case .weightKg: return "目标体重"
+            case .weeklyWeightChange: return "每周体重变化"
             }
         }
 
@@ -39,6 +42,7 @@ public final class WellbeingStore: Sendable {
             case .bedtime: return "点(24h)"
             case .waterML: return "ml"
             case .weightKg: return "kg"
+            case .weeklyWeightChange: return "kg/周"
             }
         }
     }

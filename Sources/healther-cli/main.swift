@@ -240,7 +240,7 @@ let dataDir = URL(fileURLWithPath: (env["HEALTHER_DATA_DIR"] ?? "~/.local/share/
 var models = ModelConfig.deepSeekDefault
 if let m = env["HEALTHER_CHAT_MODEL"] { models.chatModel = m }
 if let e = env["HEALTHER_EFFORT"].flatMap(ReasoningEffort.init(rawValue:)) { models.chatEffort = e }
-let config = HealtherConfig(assistantName: env["HEALTHER_NAME"] ?? "小禾", models: models, dataDirectory: dataDir)
+let config = HealtherConfig(assistantName: env["HEALTHER_NAME"] ?? "大肥鱼", models: models, dataDirectory: dataDir)
 let llm = OpenAICompatibleClient(baseURL: URL(string: env["HEALTHER_BASE_URL"] ?? "https://api.deepseek.com")!, apiKey: apiKey)
 
 let services: HealtherServices

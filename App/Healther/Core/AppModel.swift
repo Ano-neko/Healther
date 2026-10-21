@@ -277,6 +277,17 @@ final class AppModel {
         await requestHealthAccess()
     }
 
+    // MARK: Intake
+
+    func energyPlan() async -> EnergyPlan? { await services?.energyPlan() }
+
+    /// Writes only real changes, so a note the agent attached to the goal survives.
+    func setGoal(_ kind: WellbeingStore.GoalKind, _ target: Double?) async {
+        guard let s = services, s.wellbeing.goal(kind)?.target != target else { return }
+        try? s.wellbeing.setGoal(kind, target: target)
+        await refreshToday()
+    }
+
     // MARK: Body
 
     var bodyProfile: BodyProfile { services?.body.manual ?? BodyProfile() }

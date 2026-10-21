@@ -84,7 +84,7 @@ import Testing
         try s.conversation.append(turnID: "t2", role: .user, content: "吃什么")
         let msgs = try ContextAssembler(s: s).build(now: Date(), currentTurnID: "t2", liveState: "## 此刻")
         #expect(msgs.map(\.role) == [.system, .user, .assistant, .system, .user])
-        #expect(msgs[0].text.contains("你是「小禾」"))
+        #expect(msgs[0].text.contains("你是「大肥鱼」"))
         #expect(msgs[3].text == "## 此刻")
     }
 

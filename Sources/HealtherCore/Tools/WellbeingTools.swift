@@ -137,10 +137,11 @@ struct LogMoodTool: AgentTool {
 
 struct SetGoalTool: AgentTool {
     let name = "set_goal"
-    let description = "设置或清除一个数字目标（和用户商量好之后再设）。"
+    let description = "设置或清除一个数字目标（和用户商量好之后再设）。每日热量默认自动计算（消耗 + weekly_weight_change），一般只设 weekly_weight_change；TA 坚持要固定数字才设 daily_kcal，清除 daily_kcal 即回到自动。"
     let parameters = Schema.object([
-        "kind": Schema.string("目标类型", enum: WellbeingStore.GoalKind.allCases.map(\.rawValue)),
-        "target": Schema.nullable(Schema.number("目标值；入睡时间用 24h 小数（23.5=23:30）；null 表示清除")),
+        "kind": Schema.string(WellbeingStore.GoalKind.allCases.map { "\($0.rawValue)=\($0.title)（\($0.unit)）" }.joined(separator: "；"),
+                              enum: WellbeingStore.GoalKind.allCases.map(\.rawValue)),
+        "target": Schema.nullable(Schema.number("目标值；入睡时间用 24h 小数（23.5=23:30）；每周体重变化减重填负数（-0.5 = 每周减 0.5kg）；null 表示清除")),
         "note": Schema.string("说明，如“减脂期，每周 -0.5kg”"),
     ], required: ["kind", "target"])
 
@@ -148,7 +149,12 @@ struct SetGoalTool: AgentTool {
         guard let kind = WellbeingStore.GoalKind(rawValue: args["kind"]?.stringValue ?? "") else { return .error("未知目标类型") }
         let target = args["target"]?.doubleValue
         try ctx.services.wellbeing.setGoal(kind, target: target, note: args["note"]?.stringValue, now: ctx.now)
-        let label = target.map { "\(kind.title) → \(fmt($0, kind == .weightKg || kind == .sleepHours ? 1 : 0))\(kind.unit)" } ?? "清除了\(kind.title)目标"
-        return ToolResult(["ok": true], summary: label, events: [.memoryChanged("目标：\(label)")])
+        let places = kind == .weeklyWeightChange ? 2 : kind == .weightKg || kind == .sleepHours ? 1 : 0
+        let label = target.map { "\(kind.title) → \(fmt($0, places))\(kind.unit)" } ?? "清除了\(kind.title)目标"
+        var o: [String: JSONValue] = ["ok": true]
+        if kind == .dailyKcal || kind == .weeklyWeightChange, let plan = await ctx.services.energyPlan(now: ctx.now) {
+            o["energy_plan"] = plan.json
+        }
+        return ToolResult(.object(o), summary: label, events: [.memoryChanged("目标：\(label)")])
     }
 }

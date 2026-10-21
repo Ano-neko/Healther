@@ -78,3 +78,31 @@ import Testing
         #expect(json["basal_energy"] != nil && json["blood_oxygen"] != nil)
     }
 }
+
+@Suite struct EnergyPlanTests {
+    @Test func paceTurnsIntoDailyTargetWithinSafeLimits() {
+        #expect(EnergyPlan.suggest(burn: 2400, weeklyChangeKg: -0.5, sex: nil).kcal == 1850)
+        #expect(EnergyPlan.suggest(burn: 2400, weeklyChangeKg: 0, sex: nil).kcal == 2400)
+        let fast = EnergyPlan.suggest(burn: 2400, weeklyChangeKg: -1.5, sex: nil)
+        #expect(fast.kcal == 1800 && fast.limited)  // deficit capped at 25%
+        let low = EnergyPlan.suggest(burn: 1500, weeklyChangeKg: -1, sex: .female)
+        #expect(low.kcal == 1200 && low.limited)  // never below the floor
+        #expect(EnergyPlan.suggest(burn: 2000, weeklyChangeKg: 1, sex: .male).kcal == 2500)
+    }
+
+    @Test func planFollowsWatchDataAndGoals() async throws {
+        let s = try makeServices(ScriptedLLM([]))
+        let auto = try #require(await s.energyPlan())
+        #expect(auto.source == .watch && auto.daysMeasured >= 4 && auto.fixed == nil)
+        #expect(auto.target == auto.suggested && abs(auto.suggested - auto.burn) <= 10)
+
+        try s.wellbeing.setGoal(.weeklyWeightChange, target: -0.5)
+        let losing = try #require(await s.energyPlan())
+        #expect(losing.suggested < auto.suggested - 400)
+
+        try s.wellbeing.setGoal(.dailyKcal, target: 1700)
+        #expect(await s.energyPlan()?.target == 1700)
+        let live = await ContextAssembler(s: s).liveState(now: Date(), userText: "")
+        #expect(live.contains("每天 1700 kcal（TA 定的固定值"))
+    }
+}

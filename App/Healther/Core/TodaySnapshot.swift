@@ -12,6 +12,7 @@ struct TodaySnapshot: Equatable {
     var trends: [HealthMetric: [SparkPointValue]] = [:]
     var isMock = false
     var note: DayNote?
+    var energyPlan: EnergyPlan?
 
     var isToday: Bool { Calendar.current.isDateInToday(date) }
 
@@ -20,7 +21,8 @@ struct TodaySnapshot: Equatable {
         var value: Double
     }
 
-    var kcalGoal: Double { goals[.dailyKcal] ?? 2000 }
+    /// Fixed goal, else the automatic one (burn ± weekly change), else a plain default.
+    var kcalGoal: Double { energyPlan?.target ?? goals[.dailyKcal] ?? 2000 }
     var proteinGoal: Double { goals[.proteinG] ?? 100 }
     var stepsGoal: Double { goals[.steps] ?? 8000 }
     var exerciseGoal: Double { goals[.exerciseMinutes] ?? 30 }
@@ -41,6 +43,7 @@ struct TodaySnapshot: Equatable {
         snap.meals = (try? s.meals.meals(from: start, to: end)) ?? []
         snap.waterML = (try? s.wellbeing.water(from: start, to: end)) ?? 0
         for g in (try? s.wellbeing.goals()) ?? [] { snap.goals[g.kind] = g.target }
+        snap.energyPlan = await s.energyPlan(now: now)
         for metric in [HealthMetric.restingHeartRate, .heartRateVariability, .bodyMass, .sleepHours, .respiratoryRate] {
             let values = (try? await s.dailyValues(metric, days: 7, endingAt: now)) ?? []
             snap.trends[metric] = values.compactMap { v in v.value.map { SparkPointValue(day: v.day, value: $0) } }

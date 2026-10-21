@@ -144,7 +144,7 @@ struct ConfirmMealTool: AgentTool {
         let dayTotal = try s.meals.totals(from: ctx.clock.startOfDay(meal.eatenAt), to: ctx.clock.endOfDay(meal.eatenAt))
         let o: JSONValue = [
             "ok": true, "meal": meal.json(clock: ctx.clock), "day_total": dayTotal.json, "synced_to_apple_health": .bool(synced),
-            "daily_kcal_goal": JSONValue(s.wellbeing.goal(.dailyKcal)?.target),
+            "daily_kcal_goal": JSONValue(await s.energyPlan(now: ctx.now)?.target),
         ]
         return ToolResult(o, summary: "已记录\(meal.type.displayName) \(fmt(meal.totals.kcal)) kcal", events: [.mealUpdated(meal)])
     }

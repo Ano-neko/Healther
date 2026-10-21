@@ -15,7 +15,7 @@ struct AppSettings: Equatable {
 
     static func load() -> AppSettings {
         AppSettings(
-            assistantName: defaults.string(forKey: "assistantName") ?? "小禾",
+            assistantName: defaults.string(forKey: "assistantName") ?? "大肥鱼",
             baseURL: defaults.string(forKey: "baseURL") ?? "https://api.deepseek.com",
             chatModel: defaults.string(forKey: "chatModel") ?? "deepseek-flash",
             effort: ReasoningEffort(rawValue: defaults.string(forKey: "effort") ?? "") ?? .low,

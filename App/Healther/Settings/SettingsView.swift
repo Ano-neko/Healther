@@ -17,6 +17,10 @@ struct SettingsView: View {
     @State private var weight: (kg: Double, at: Date)?
     @State private var showWeightEntry = false
     @State private var weightText = ""
+    @State private var plan: EnergyPlan?
+    @State private var intakeFixed = false
+    @State private var fixedKcal: Double?
+    @State private var weeklyChange = 0.0
 
     var body: some View {
         NavigationStack {
@@ -30,6 +34,7 @@ struct SettingsView: View {
                 } header: { Text("你的伙伴") }
 
                 bodySection
+                intakeSection
 
                 Section {
                     SecureField(model.hasAPIKey ? "已保存（输入以替换）" : "sk-…", text: $apiKey)
@@ -208,7 +213,69 @@ struct SettingsView: View {
         } footer: {
             Text("Apple 健康里有的会自动带过来，这里填的优先。没有体重秤也可以手动记，会一并写进 Apple 健康。")
         }
-        .onChange(of: bodyInfo) { _, new in model.saveBody(new) }
+        .onChange(of: bodyInfo) { _, new in
+            model.saveBody(new)
+            Task { plan = await model.energyPlan() }
+        }
+    }
+
+    var intakeSection: some View {
+        Section {
+            Picker("目标", selection: $intakeFixed) {
+                Text("自动").tag(false)
+                Text("固定").tag(true)
+            }
+            .pickerStyle(.segmented)
+            if intakeFixed {
+                LabeledContent("每天") {
+                    HStack(spacing: 4) {
+                        TextField("2000", value: $fixedKcal, format: .number)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                        Text("kcal").foregroundStyle(.secondary)
+                    }
+                }
+            } else {
+                Picker("体重", selection: $weeklyChange) {
+                    ForEach(paceOptions, id: \.self) { Text(paceLabel($0)).tag($0) }
+                }
+                LabeledContent("建议每天") {
+                    Text(plan.map { "\(Int($0.suggested)) kcal" } ?? "—")
+                }
+            }
+        } header: {
+            Text("每日摄入")
+        } footer: {
+            Text((plan?.explanation ?? "有几天手表数据，或者填好身高并记一次体重，就能算出建议值。") + "。也可以直接跟\(model.assistantName)商量。")
+        }
+        .onChange(of: intakeFixed) { _, fixed in
+            if fixed && fixedKcal == nil { fixedKcal = plan?.suggested ?? 2000 }
+            Task {
+                await model.setGoal(.dailyKcal, fixed ? fixedKcal : nil)
+                plan = await model.energyPlan()
+            }
+        }
+        .onChange(of: fixedKcal) { _, kcal in
+            guard intakeFixed, let kcal, (800...6000).contains(kcal) else { return }
+            Task { await model.setGoal(.dailyKcal, kcal) }
+        }
+        .onChange(of: weeklyChange) { _, v in
+            Task {
+                await model.setGoal(.weeklyWeightChange, v == 0 ? nil : v)
+                plan = await model.energyPlan()
+            }
+        }
+    }
+
+    var paceOptions: [Double] {
+        var options = [-1, -0.75, -0.5, -0.25, 0, 0.25, 0.5]
+        if !options.contains(weeklyChange) { options.append(weeklyChange) }
+        return options.sorted()
+    }
+
+    func paceLabel(_ v: Double) -> String {
+        let n = String(format: "%g", abs(v))
+        return v == 0 ? "保持" : v < 0 ? "每周减 \(n) kg" : "每周增 \(n) kg"
     }
 
     var birthYears: [Int] {
@@ -221,6 +288,11 @@ struct SettingsView: View {
         healthBody = model.bodyFromHealth
         bodyInfo = model.bodyProfile
         weight = await model.latestWeight()
+        let p = await model.energyPlan()
+        plan = p
+        fixedKcal = p?.fixed
+        intakeFixed = p?.fixed != nil
+        weeklyChange = p?.weeklyChangeKg ?? model.services?.wellbeing.goal(.weeklyWeightChange)?.target ?? 0
     }
 
     /// "HH:mm" strings edited as a time picker.

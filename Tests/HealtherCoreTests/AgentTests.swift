@@ -32,7 +32,7 @@ import Testing
         let second = llm.requests[1].messages
         #expect(second.contains { $0.role == .tool && $0.toolCallID == "a" })
         // Live state sits before the user message; identity is the first system message.
-        #expect(second[0].text.contains("你是「小禾」"))
+        #expect(second[0].text.contains("你是「大肥鱼」"))
         #expect(second.firstIndex { $0.text.hasPrefix("## 此刻") }! < second.lastIndex { $0.role == .user }!)
 
         // Confirm in a second turn → personal library learns the foods.

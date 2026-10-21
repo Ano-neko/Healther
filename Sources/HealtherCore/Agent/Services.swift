@@ -11,7 +11,7 @@ public struct HealtherConfig: Sendable {
     public var autoRecallLimit: Int
     public var maxToolSteps: Int
 
-    public init(assistantName: String = "小禾", models: ModelConfig = .deepSeekDefault, dataDirectory: URL,
+    public init(assistantName: String = "大肥鱼", models: ModelConfig = .deepSeekDefault, dataDirectory: URL,
                 compactThresholdTokens: Int = 24_000, keepRecentTokens: Int = 10_000, autoRecallLimit: Int = 6, maxToolSteps: Int = 10) {
         self.assistantName = assistantName
         self.models = models
