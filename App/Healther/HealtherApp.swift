@@ -53,6 +53,13 @@ struct RootView: View {
                ["chat", "today", "memory", "settings"].contains(target) {
                 model.tab = target
             }
+            #if DEBUG
+            if url.host() == "debug", url.pathComponents.dropFirst().first == "note", let key = url.pathComponents.last {
+                let q = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+                func v(_ n: String) -> String? { q.first { $0.name == n }?.value }
+                model.debugSetNote(day: key, title: v("title") ?? "", detail: v("detail") ?? "", font: v("font"))
+            }
+            #endif
             // healther://day/2026-10-18 opens the Today tab on that day
             if url.host() == "day", let key = url.pathComponents.last,
                let day = try? Date(key, strategy: .iso8601.year().month().day()) {

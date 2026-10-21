@@ -6,10 +6,12 @@ enum WellbeingTools {
 
 struct SetTodayCardTool: AgentTool {
     let name = "set_today_card"
-    let description = "设置 App「今日」页顶部的标题和一句话，替代默认的自动文案。和 TA 商量出当天的重点、计划或提醒后用它钉上去；也可以提前写好明天的。title 为空字符串则清除，恢复默认。"
+    let description = "设置 App「今日」页顶部的标题和一段话，替代默认的自动文案。和 TA 商量出当天的重点、计划或提醒后用它钉上去，也可以是一句诗、一句标语；也可以提前写好明天的。正文最多显示三行，超出的部分 TA 点开才能看到。title 为空字符串则清除，恢复默认。"
     let parameters = Schema.object([
-        "title": Schema.string("标题，8 个字以内，如“今天悠着点”“练腿日”"),
-        "detail": Schema.string("一句话，30 个字以内，具体可执行，如“昨晚只睡 5 小时，午后别喝咖啡，11 点前睡”"),
+        "title": Schema.string("标题，简短，如“今天悠着点”“练腿日”“冬灯 · 静种”"),
+        "detail": Schema.string("正文，最好三行以内（约 60 个汉字或 120 个英文字母），如“昨晚只睡 5 小时，午后别喝咖啡，11 点前睡”"),
+        "font": Schema.string("字体，按内容气质挑：" + CardFont.allCases.map(\.hint).joined(separator: "；") + "。不传则沿用这一天原来的字体",
+                              enum: CardFont.allCases.map(\.rawValue)),
         "day": Schema.string("日期 YYYY-MM-DD，默认今天"),
     ], required: ["title"])
 
@@ -22,8 +24,12 @@ struct SetTodayCardTool: AgentTool {
             return ToolResult(["ok": true, "day": .string(key), "cleared": true], summary: "清除了 \(key) 的今日卡片")
         }
         let detail = (args["detail"]?.stringValue ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        try ctx.services.dayNotes.set(DayNote(title: String(title.prefix(16)), detail: String(detail.prefix(60)), updatedAt: ctx.now), for: key)
-        return ToolResult(["ok": true, "day": .string(key), "title": .string(title)], summary: "今日卡片：\(title)")
+        guard title.count <= DayNote.maxTitle, detail.count <= DayNote.maxDetail else {
+            return .error("太长了：标题最多 \(DayNote.maxTitle) 字，正文最多 \(DayNote.maxDetail) 字。精简后再钉")
+        }
+        let font = args["font"]?.stringValue.flatMap(CardFont.init(rawValue:))?.rawValue ?? ctx.services.dayNotes.note(for: key)?.font
+        try ctx.services.dayNotes.set(DayNote(title: title, detail: detail, updatedAt: ctx.now, font: font), for: key)
+        return ToolResult(["ok": true, "day": .string(key), "title": .string(title), "font": JSONValue(font)], summary: "今日卡片：\(title)")
     }
 }
 

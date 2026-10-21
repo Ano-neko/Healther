@@ -49,7 +49,8 @@ public struct EnergyPlan: Sendable, Equatable {
     /// For prompts and the settings footer.
     public var explanation: String {
         let how = source == .watch ? "近 \(daysMeasured) 天手表测得平均每天消耗 \(fmt(burn)) kcal" : "按身高体重年龄估算每天消耗约 \(fmt(burn)) kcal"
-        let pace = weeklyChangeKg == 0 ? "维持体重" : (weeklyChangeKg < 0 ? "每周减 \(fmt(-weeklyChangeKg, 2)) kg" : "每周增 \(fmt(weeklyChangeKg, 2)) kg")
+        let kg = String(format: "%g", (abs(weeklyChangeKg) * 100).rounded() / 100)
+        let pace = weeklyChangeKg == 0 ? "维持体重" : (weeklyChangeKg < 0 ? "每周减 \(kg) kg" : "每周增 \(kg) kg")
         var s = "\(how)，\(pace) → 建议每天 \(fmt(suggested)) kcal"
         if limited { s += "（已按安全范围放缓）" }
         if !assumptions.isEmpty { s += "；" + assumptions.joined(separator: "，") }

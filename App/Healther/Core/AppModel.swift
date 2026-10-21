@@ -499,6 +499,25 @@ final class AppModel {
         if day == todayDay { today = snap }
     }
 
+    /// Long-press menu on the pinned card.
+    func setNoteFont(_ font: CardFont) {
+        guard let s = services else { return }
+        let key = s.clock.dayKey(todayDay)
+        guard var note = s.dayNotes.note(for: key) else { return }
+        note.font = font == .system ? nil : font.rawValue
+        try? s.dayNotes.set(note, for: key)
+        Task { await refreshToday() }
+    }
+
+    #if DEBUG
+    /// healther://debug/note/2026-10-01?title=…&detail=…&font=serif — empty title clears.
+    func debugSetNote(day: String, title: String, detail: String, font: String?) {
+        guard let s = services else { return }
+        try? s.dayNotes.set(title.isEmpty ? nil : DayNote(title: title, detail: detail, updatedAt: Date(), font: font), for: day)
+        Task { await refreshToday() }
+    }
+    #endif
+
     func showDay(_ day: Date) {
         let start = Calendar.current.startOfDay(for: min(day, Date()))
         guard start != todayDay else { return }

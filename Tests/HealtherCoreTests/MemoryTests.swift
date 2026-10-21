@@ -107,6 +107,24 @@ import Testing
         #expect(s.dayNotes.note(for: s.clock.dayKey(now)) == nil)
     }
 
+    @Test func todayCardKeepsLongTextAndFont() async throws {
+        let s = try makeServices(ScriptedLLM([]))
+        let now = Date()
+        let key = s.clock.dayKey(now)
+        let ctx = ToolContext(services: s, now: now, turnID: "t", attachments: [])
+        let line = "Where winter lanterns learn the river's tongue, and the seeds sleep quietly until spring."
+        _ = try await SetTodayCardTool().run(["title": "冬灯 · 静种", "detail": .string(line), "font": "serif"], ctx)
+        #expect(s.dayNotes.note(for: key) == DayNote(title: "冬灯 · 静种", detail: line, updatedAt: now, font: "serif"))
+        // Font sticks when only the text changes; overlong text is refused, not cut.
+        _ = try await SetTodayCardTool().run(["title": "冬灯", "detail": "短一点"], ctx)
+        #expect(s.dayNotes.note(for: key)?.font == "serif")
+        _ = try await SetTodayCardTool().run(["title": "冬灯", "detail": .string(String(repeating: "长", count: 400))], ctx)
+        #expect(s.dayNotes.note(for: key)?.detail == "短一点")
+        // Notes saved before fonts existed still decode.
+        let old = try JSONDecoder().decode(DayNote.self, from: Data(#"{"title":"a","detail":"b","updatedAt":0}"#.utf8))
+        #expect(old.font == nil)
+    }
+
     @Test func oldPhotosBecomePlaceholders() throws {
         let s = try makeServices(ScriptedLLM([]))
         var p = ConversationStore.Payload()

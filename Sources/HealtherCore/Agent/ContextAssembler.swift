@@ -118,7 +118,7 @@ struct ContextAssembler {
             lines.append("- 今日情绪记录：" + moods.map { "\(clock.timeString($0.at)) \($0.valence > 0 ? "+" : "")\($0.valence) \($0.labels.joined(separator: "/"))" }.joined(separator: "；"))
         }
         if let note = s.dayNotes.note(for: clock.dayKey(now)) {
-            lines.append("- 今日卡片（你钉在「今日」页顶部的）：「\(note.title)」\(note.detail)")
+            lines.append("- 今日卡片（你钉在「今日」页顶部的）：「\(note.title)」\(note.detail)" + (note.font.map { "（字体 \($0)）" } ?? ""))
         }
         let otherGoals = goals.filter { [.bedtime].contains($0.kind) }
         if !otherGoals.isEmpty {

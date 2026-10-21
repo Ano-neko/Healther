@@ -4,6 +4,9 @@ import SwiftUI
 struct TodayView: View {
     @Environment(AppModel.self) private var model
     @State private var pickingDate = false
+    /// The pinned card shows three lines until tapped.
+    @State private var expanded = false
+    private let fonts = CardFonts.shared
 
     var snap: TodaySnapshot { model.today }
 
@@ -52,12 +55,26 @@ struct TodayView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 dayStepper
-                Text(headline.title)
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .contentTransition(.opacity)
-                Text(headline.detail)
-                    .font(.system(size: 13))
-                    .foregroundStyle(Theme.secondaryText)
+                VStack(alignment: .leading, spacing: 4) {
+                    ClampedText(text: headline.title, font: fonts.uiFont(cardFont, size: 22, bold: true), lines: 2, expanded: expanded)
+                    ClampedText(text: headline.detail, font: fonts.uiFont(cardFont, size: cardFont == nil ? 13 : 13.5, bold: false),
+                                lines: 3, expanded: expanded)
+                        .foregroundStyle(Theme.secondaryText)
+                }
+                .contentTransition(.opacity)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    guard snap.note != nil else { return }
+                    withAnimation(.snappy) { expanded.toggle() }
+                }
+                .contextMenu {
+                    if let note = snap.note {
+                        Picker("字体", selection: Binding(get: { CardFont(rawValue: note.font ?? "") ?? .system },
+                                                          set: { model.setNoteFont($0) })) {
+                            ForEach(CardFont.allCases, id: \.self) { Text($0.menuTitle).tag($0) }
+                        }
+                    }
+                }
                 if snap.note != nil {
                     Label("\(model.assistantName) 钉的", systemImage: "pin.fill")
                         .font(.system(size: 11, weight: .medium))
@@ -69,6 +86,12 @@ struct TodayView: View {
             AgentOrb(state: .idle, size: 56)
         }
         .padding(.top, 4)
+        .onChange(of: snap.note) { expanded = false }
+    }
+
+    /// nil keeps the built-in look for the automatic headline and notes without a font.
+    var cardFont: CardFont? {
+        snap.note?.font.flatMap(CardFont.init(rawValue:))
     }
 
     /// ‹ 10月19日 星期一 › — tap the date for a calendar.
